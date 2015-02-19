@@ -421,6 +421,34 @@ class ITestCase(testcase.WithAttributes, base.BaseTestCase):
                 % self.common_config.HDFS_INITIALIZATION_TIMEOUT)
         self.close_ssh_connection()
 
+    @errormsg("Failure while event log testing: ")
+    def _test_event_log(self, cluster_id):
+        cluster = self.sahara.clusters.get(cluster_id)
+        events = self.sahara.events.list(cluster_id)
+
+        invalid_steps = []
+        if not events:
+            events = []
+
+        for step in cluster.provision_progress:
+            if not step['successful']:
+                invalid_steps.append(step)
+
+        if len(invalid_steps) > 0 or len(events) > 0:
+            events_info = "\n".join(six.text_type(e) for e in events)
+            invalid_steps_info = "\n".join(six.text_type(e)
+                                           for e in invalid_steps)
+            steps_info = "\n".join(six.text_type(e)
+                                   for e in cluster.provision_progress)
+            self.fail(
+                "Issues with event log work: "
+                "\n Not removed events: \n\n {events}"
+                "\n Incomplete steps: \n\n {invalid_steps}"
+                "\n All steps: \n\n {steps}".format(
+                    events=events_info,
+                    steps=steps_info,
+                    invalid_steps=invalid_steps_info))
+
 # --------------------------------Remote---------------------------------------
 
     def connect_to_swift(self):
@@ -450,6 +478,19 @@ class ITestCase(testcase.WithAttributes, base.BaseTestCase):
     @staticmethod
     def close_ssh_connection():
         ssh_remote._cleanup()
+
+    def transfer_helper_conf_file_to_node(self, file_name):
+        file = open('sahara/tests/integration/tests/resources/%s' % file_name
+                    ).read()
+        try:
+            self.write_file_to(file_name, file)
+
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                print(
+                    '\nFailure while conf file transferring '
+                    'to cluster node: ' + six.text_type(e)
+                )
 
     def transfer_helper_script_to_node(self, script_name, parameter_list=None):
         script = open('sahara/tests/integration/tests/resources/%s'
