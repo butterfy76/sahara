@@ -25,6 +25,14 @@ class AbstractClusterContext(object):
         return
 
     @abc.abstractproperty
+    def configure_sh_path(self):
+        return
+
+    @abc.abstractproperty
+    def configure_sh(self):
+        return
+
+    @abc.abstractproperty
     def hadoop_version(self):
         return
 
@@ -106,4 +114,44 @@ class AbstractClusterContext(object):
 
     @abc.abstractproperty
     def should_be_restarted(self):
+        return
+
+    @abc.abstractproperty
+    def mapr_repos(self):
+        return
+
+    @abc.abstractproperty
+    def is_prebuilt(self):
+        return
+
+    @abc.abstractproperty
+    def local_repo(self):
+        return
+
+    @abc.abstractproperty
+    def required_services(self):
+        return
+
+    @abc.abstractproperty
+    def all_services(self):
+        return
+
+    @abc.abstractproperty
+    def mapr_version(self):
+        return
+
+    @abc.abstractproperty
+    def ubuntu_base_repo(self):
+        return
+
+    @abc.abstractproperty
+    def ubuntu_ecosystem_repo(self):
+        return
+
+    @abc.abstractproperty
+    def centos_base_repo(self):
+        return
+
+    @abc.abstractproperty
+    def centos_ecosystem_repo(self):
         return
