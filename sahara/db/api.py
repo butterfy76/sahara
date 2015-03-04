@@ -107,10 +107,13 @@ def to_dict(func):
 
 # Cluster ops
 
-@to_dict
-def cluster_get(context, cluster):
+
+def cluster_get(context, cluster, show_progress=False):
     """Return the cluster or None if it does not exist."""
-    return IMPL.cluster_get(context, cluster)
+    cluster = IMPL.cluster_get(context, cluster)
+    if cluster:
+        return cluster.to_dict(show_progress)
+    return None
 
 
 @to_dict
@@ -212,6 +215,12 @@ def cluster_template_create(context, values):
 def cluster_template_destroy(context, cluster_template):
     """Destroy the cluster_template or raise if it does not exist."""
     IMPL.cluster_template_destroy(context, cluster_template)
+
+
+@to_dict
+def cluster_template_update(context, values):
+    """Update a cluster_template from the values dictionary."""
+    return IMPL.cluster_template_update(context, values)
 
 
 # Node Group Template ops

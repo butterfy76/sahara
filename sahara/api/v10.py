@@ -16,7 +16,6 @@
 from oslo_log import log as logging
 
 from sahara.api import acl
-import sahara.api.base as b
 from sahara.service import api
 from sahara.service import validation as v
 from sahara.service.validations import cluster_templates as v_ct
@@ -61,7 +60,9 @@ def clusters_scale(cluster_id, data):
 @acl.enforce("clusters:get")
 @v.check_exists(api.get_cluster, 'cluster_id')
 def clusters_get(cluster_id):
-    return u.render(api.get_cluster(cluster_id).to_wrapped_dict())
+    data = u.get_request_args()
+    show_events = unicode(data.get('show_progress', 'false')).lower() == 'true'
+    return u.render(api.get_cluster(cluster_id, show_events).to_wrapped_dict())
 
 
 @rest.delete('/clusters/<cluster_id>')
@@ -100,8 +101,11 @@ def cluster_templates_get(cluster_template_id):
 @rest.put('/cluster-templates/<cluster_template_id>')
 @acl.enforce("cluster-templates:modify")
 @v.check_exists(api.get_cluster_template, 'cluster_template_id')
+@v.validate(None, v_ct.check_cluster_template_update)
 def cluster_templates_update(cluster_template_id, data):
-    return b.not_implemented()
+    return u.render(
+        api.update_cluster_template(
+            cluster_template_id, data).to_wrapped_dict())
 
 
 @rest.delete('/cluster-templates/<cluster_template_id>')

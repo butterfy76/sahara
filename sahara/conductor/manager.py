@@ -120,9 +120,9 @@ class ConductorManager(db_base.Base):
 
     # Cluster ops
 
-    def cluster_get(self, context, cluster):
+    def cluster_get(self, context, cluster, show_progress=False):
         """Return the cluster or None if it does not exist."""
-        return self.db.cluster_get(context, cluster)
+        return self.db.cluster_get(context, cluster, show_progress)
 
     def cluster_get_all(self, context, **kwargs):
         """Get all clusters filtered by **kwargs.
@@ -250,6 +250,17 @@ class ConductorManager(db_base.Base):
     def cluster_template_destroy(self, context, cluster_template):
         """Destroy the cluster_template or raise if it does not exist."""
         self.db.cluster_template_destroy(context, cluster_template)
+
+    def cluster_template_update(self, context, id, values):
+        """Update a cluster_template from the values dictionary."""
+        values = copy.deepcopy(values)
+        values = _apply_defaults(values, CLUSTER_DEFAULTS)
+        values['tenant_id'] = context.tenant_id
+        values['id'] = id
+
+        values['node_groups'] = self._populate_node_groups(context, values)
+
+        return self.db.cluster_template_update(context, values)
 
     # Node Group Template ops
 

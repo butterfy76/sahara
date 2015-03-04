@@ -49,8 +49,8 @@ def get_clusters(**kwargs):
     return conductor.cluster_get_all(context.ctx(), **kwargs)
 
 
-def get_cluster(id):
-    return conductor.cluster_get(context.ctx(), id)
+def get_cluster(id, show_progress=False):
+    return conductor.cluster_get(context.ctx(), id, show_progress)
 
 
 def scale_cluster(id, data):
@@ -147,6 +147,10 @@ def create_cluster_template(values):
 
 def terminate_cluster_template(id):
     return conductor.cluster_template_destroy(context.ctx(), id)
+
+
+def update_cluster_template(id, values):
+    return conductor.cluster_template_update(context.ctx(), id, values)
 
 
 # NodeGroupTemplate ops
