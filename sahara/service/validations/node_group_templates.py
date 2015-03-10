@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+
 from sahara import exceptions as ex
 from sahara.i18n import _
 from sahara.service import api
@@ -101,6 +103,11 @@ NODE_GROUP_TEMPLATE_SCHEMA = {
     ]
 }
 
+# For an update we do not require any fields but we want the given
+# fields to be validated
+NODE_GROUP_TEMPLATE_UPDATE_SCHEMA = copy.copy(NODE_GROUP_TEMPLATE_SCHEMA)
+NODE_GROUP_TEMPLATE_UPDATE_SCHEMA["required"] = []
+
 
 def check_node_group_template_create(data, **kwargs):
     b.check_node_group_template_unique_name(data['name'])
@@ -134,3 +141,21 @@ def check_node_group_template_usage(node_group_template_id, **kwargs):
             {'template': node_group_template_id,
              'users': template_users and ', '.join(template_users) or 'N/A',
              'clusters': cluster_users and ', '.join(cluster_users) or 'N/A'})
+
+
+def check_node_group_template_update(data, **kwargs):
+    if data.get('plugin_name') and not data.get('hadoop_version'):
+        raise ex.InvalidReferenceException(
+            _("You must specify a hadoop_version value"
+              "for your plugin_name"))
+    if data.get('hadoop_version') and not data.get('plugin_name'):
+        raise ex.InvalidReferenceException(
+            _("You must specify a plugin_name"
+              "for your hadoop_version value"))
+
+    if data.get('plugin_name'):
+        b.check_plugin_name_exists(data['plugin_name'])
+        b.check_plugin_supports_version(data['plugin_name'],
+                                        data['hadoop_version'])
+        b.check_node_group_basic_fields(data['plugin_name'],
+                                        data['hadoop_version'], data)

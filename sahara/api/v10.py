@@ -101,7 +101,8 @@ def cluster_templates_get(cluster_template_id):
 @rest.put('/cluster-templates/<cluster_template_id>')
 @acl.enforce("cluster-templates:modify")
 @v.check_exists(api.get_cluster_template, 'cluster_template_id')
-@v.validate(None, v_ct.check_cluster_template_update)
+@v.validate(v_ct.CLUSTER_TEMPLATE_UPDATE_SCHEMA,
+            v_ct.check_cluster_template_update)
 def cluster_templates_update(cluster_template_id, data):
     return u.render(
         api.update_cluster_template(
@@ -147,6 +148,8 @@ def node_group_templates_get(node_group_template_id):
 @rest.put('/node-group-templates/<node_group_template_id>')
 @acl.enforce("node-group-templates:modify")
 @v.check_exists(api.get_node_group_template, 'node_group_template_id')
+@v.validate(v_ngt.NODE_GROUP_TEMPLATE_UPDATE_SCHEMA,
+            v_ngt.check_node_group_template_update)
 def node_group_templates_update(node_group_template_id, data):
     return u.render(
         api.update_node_group_template(node_group_template_id, data))
