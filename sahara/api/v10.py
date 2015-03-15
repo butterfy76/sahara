@@ -18,10 +18,12 @@ from oslo_log import log as logging
 from sahara.api import acl
 from sahara.service import api
 from sahara.service import validation as v
+from sahara.service.validations import cluster_template_schema as ct_schema
 from sahara.service.validations import cluster_templates as v_ct
 from sahara.service.validations import clusters as v_c
 from sahara.service.validations import clusters_scaling as v_c_s
 from sahara.service.validations import images as v_images
+from sahara.service.validations import node_group_template_schema as ngt_schema
 from sahara.service.validations import node_group_templates as v_ngt
 from sahara.service.validations import plugins as v_p
 import sahara.utils.api as u
@@ -85,7 +87,8 @@ def cluster_templates_list():
 
 @rest.post('/cluster-templates')
 @acl.enforce("cluster-templates:create")
-@v.validate(v_ct.CLUSTER_TEMPLATE_SCHEMA, v_ct.check_cluster_template_create)
+@v.validate(ct_schema.CLUSTER_TEMPLATE_SCHEMA,
+            v_ct.check_cluster_template_create)
 def cluster_templates_create(data):
     return u.render(api.create_cluster_template(data).to_wrapped_dict())
 
@@ -101,7 +104,7 @@ def cluster_templates_get(cluster_template_id):
 @rest.put('/cluster-templates/<cluster_template_id>')
 @acl.enforce("cluster-templates:modify")
 @v.check_exists(api.get_cluster_template, 'cluster_template_id')
-@v.validate(v_ct.CLUSTER_TEMPLATE_UPDATE_SCHEMA,
+@v.validate(ct_schema.CLUSTER_TEMPLATE_UPDATE_SCHEMA,
             v_ct.check_cluster_template_update)
 def cluster_templates_update(cluster_template_id, data):
     return u.render(
@@ -131,7 +134,7 @@ def node_group_templates_list():
 
 @rest.post('/node-group-templates')
 @acl.enforce("node-group-templates:create")
-@v.validate(v_ngt.NODE_GROUP_TEMPLATE_SCHEMA,
+@v.validate(ngt_schema.NODE_GROUP_TEMPLATE_SCHEMA,
             v_ngt.check_node_group_template_create)
 def node_group_templates_create(data):
     return u.render(api.create_node_group_template(data).to_wrapped_dict())
@@ -148,7 +151,7 @@ def node_group_templates_get(node_group_template_id):
 @rest.put('/node-group-templates/<node_group_template_id>')
 @acl.enforce("node-group-templates:modify")
 @v.check_exists(api.get_node_group_template, 'node_group_template_id')
-@v.validate(v_ngt.NODE_GROUP_TEMPLATE_UPDATE_SCHEMA,
+@v.validate(ngt_schema.NODE_GROUP_TEMPLATE_UPDATE_SCHEMA,
             v_ngt.check_node_group_template_update)
 def node_group_templates_update(node_group_template_id, data):
     return u.render(
