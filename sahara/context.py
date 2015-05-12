@@ -131,6 +131,14 @@ class Context(context.RequestContext):
     def tenant_id(self, value):
         self.tenant = value
 
+    @property
+    def user_name(self):
+        return self.username
+
+    @property
+    def project_name(self):
+        return self.tenant_name
+
 
 def get_admin_context():
     return Context(is_admin=True)
@@ -321,12 +329,14 @@ class SetCurrentInstanceId(object):
         self.prev_uuid = ctx.resource_uuid
         if ctx.resource_uuid:
             ctx.resource_uuid = ctx.resource_uuid.replace('none', instance_id)
+            context.get_current().resource_uuid = ctx.resource_uuid
 
     def __enter__(self):
         pass
 
     def __exit__(self, *ex):
         current().resource_uuid = self.prev_uuid
+        context.get_current().resource_uuid = self.prev_uuid
 
 
 def set_current_instance_id(instance_id):

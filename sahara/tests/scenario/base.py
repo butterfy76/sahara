@@ -31,6 +31,7 @@ from tempest_lib import base
 from tempest_lib import exceptions as exc
 
 from sahara.tests.scenario import clients
+from sahara.tests.scenario import timeouts
 from sahara.tests.scenario import utils
 
 
@@ -82,6 +83,7 @@ class BaseTestCase(base.BaseTestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self._init_clients()
+        timeouts.Defaults.init_defaults(self.testcase)
         self.plugin_opts = {
             'plugin_name': self.testcase['plugin_name'],
             'hadoop_version': self.testcase['plugin_version']
@@ -96,21 +98,15 @@ class BaseTestCase(base.BaseTestCase):
         sahara_service_type = self.credentials['sahara_service_type']
         sahara_url = self.credentials['sahara_url']
 
-        self.sahara = clients.SaharaClient(username=username,
-                                           api_key=password,
-                                           project_name=tenant_name,
-                                           auth_url=auth_url,
+        session = clients.get_session(
+            auth_url, username, password, tenant_name)
+
+        self.sahara = clients.SaharaClient(session=session,
                                            service_type=sahara_service_type,
                                            sahara_url=sahara_url)
-        self.nova = clients.NovaClient(username=username,
-                                       api_key=password,
-                                       project_id=tenant_name,
-                                       auth_url=auth_url)
-        self.neutron = clients.NeutronClient(username=username,
-                                             password=password,
-                                             tenant_name=tenant_name,
-                                             auth_url=auth_url)
-
+        self.nova = clients.NovaClient(session=session)
+        self.neutron = clients.NeutronClient(session=session)
+        # swiftclient doesn't support keystone sessions
         self.swift = clients.SwiftClient(authurl=auth_url,
                                          user=username,
                                          key=password,
@@ -124,8 +120,9 @@ class BaseTestCase(base.BaseTestCase):
 
     @track_result("Check transient")
     def check_transient(self):
-        # TODO(sreshetniak): make timeout configurable
-        with fixtures.Timeout(300, gentle=True):
+        with fixtures.Timeout(
+                timeouts.Defaults.instance.timeout_check_transient,
+                gentle=True):
             while True:
                 if self.sahara.is_resource_deleted(
                         self.sahara.get_cluster_status, self.cluster_id):
@@ -161,7 +158,7 @@ class BaseTestCase(base.BaseTestCase):
                 location = utils.rand_name(ds['destination'])
             if ds['type'] == 'swift':
                 url = self._create_swift_data(location)
-            if ds['type'] == 'hdfs':
+            if ds['type'] == 'hdfs' or ds['type'] == 'maprfs':
                 url = location
             return self.__create_datasource(
                 name=utils.rand_name(name),
@@ -225,8 +222,9 @@ class BaseTestCase(base.BaseTestCase):
                               configs)
 
     def _poll_jobs_status(self, exec_ids):
-        # TODO(sreshetniak): make timeout configurable
-        with fixtures.Timeout(1800, gentle=True):
+        with fixtures.Timeout(
+                timeouts.Defaults.instance.timeout_poll_jobs_status,
+                gentle=True):
             success = False
             while not success:
                 success = True
@@ -401,8 +399,9 @@ class BaseTestCase(base.BaseTestCase):
         self._poll_cluster_status(cluster_id)
 
     def _poll_cluster_status(self, cluster_id):
-        # TODO(sreshetniak): make timeout configurable
-        with fixtures.Timeout(1800, gentle=True):
+        with fixtures.Timeout(
+                timeouts.Defaults.instance.timeout_poll_cluster_status,
+                gentle=True):
             while True:
                 status = self.sahara.get_cluster_status(cluster_id)
                 if status == 'Active':

@@ -16,6 +16,8 @@
 import time
 
 import fixtures
+from keystoneclient.auth.identity import v3 as identity_v3
+from keystoneclient import session
 from neutronclient.neutron import client as neutron_client
 from novaclient import client as nova_client
 from oslo_utils import uuidutils
@@ -26,13 +28,27 @@ from swiftclient import exceptions as swift_exc
 from tempest_lib import exceptions as exc
 
 
+def get_session(auth_url=None, username=None, password=None,
+                project_name=None):
+    auth = identity_v3.Password(auth_url=auth_url.replace('/v2.0', '/v3'),
+                                username=username,
+                                password=password,
+                                project_name=project_name,
+                                user_domain_name='default',
+                                project_domain_name='default')
+    return session.Session(auth=auth)
+
+from sahara.tests.scenario import timeouts
+
+
 class Client(object):
     def is_resource_deleted(self, method, *args, **kwargs):
         raise NotImplementedError
 
     def delete_resource(self, method, *args, **kwargs):
-        # TODO(sreshetniak): make timeout configurable
-        with fixtures.Timeout(300, gentle=True):
+        with fixtures.Timeout(
+                timeouts.Defaults.instance.timeout_delete_resource,
+                gentle=True):
             while True:
                 if self.is_resource_deleted(method, *args, **kwargs):
                     break

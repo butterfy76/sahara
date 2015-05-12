@@ -206,6 +206,22 @@ SCHEMA = {
                         "required": ["name"],
                         "additionalProperties": False,
                     },
+                    "timeout_check_transient": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "timeout_delete_resource": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "timeout_poll_cluster_status": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "timeout_poll_jobs_status": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
                     "scaling": {
                         "type": "array",
                         "minItems": 1,
@@ -268,7 +284,7 @@ SCHEMA = {
                                 "properties": {
                                     "type": {
                                         "type": "string",
-                                        "enum": ["swift", "hdfs"]
+                                        "enum": ["swift", "hdfs", "maprfs"]
                                     },
                                     "source": {
                                         "type": "string"
@@ -282,7 +298,7 @@ SCHEMA = {
                                 "properties": {
                                     "type": {
                                         "type": "string",
-                                        "enum": ["swift", "hdfs"]
+                                        "enum": ["swift", "hdfs", "maprfs"]
                                     },
                                     "destination": {
                                         "type": "string"
