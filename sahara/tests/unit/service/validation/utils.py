@@ -30,10 +30,11 @@ from sahara.tests.unit import testutils as tu
 m = {}
 
 _types_checks = {
-    "string": [1, (), {}],
-    "integer": ["a", (), {}],
-    "uuid": ["z550e8400-e29b-41d4-a716-446655440000", 1, "a", (), {}],
-    "array": [{}, 'a', 1]
+    "string": [1, (), {}, True],
+    "integer": ["a", (), {}, True],
+    "uuid": ["z550e8400-e29b-41d4-a716-446655440000", 1, "a", (), {}, True],
+    "array": [{}, 'a', 1, True],
+    "boolean": [1, 'a', (), {}]
 }
 
 
@@ -184,7 +185,7 @@ def start_patch(patch_templates=True):
             if self.name == 'test':
                 return ['vanilla', '1.2.1']
             else:
-                return ['wrong_tag']
+                return ['vanilla', 'wrong_tag']
 
     def _get_image(id):
         if id == '550e8400-e29b-41d4-a716-446655440000':
@@ -332,26 +333,34 @@ class ValidationTestCase(base.SaharaTestCase):
                        u"'a-!' is not a 'valid_name_hostname'")
         )
 
+    def _prop_types_str(self, prop_types):
+        return ", ".join(["'%s'" % prop for prop in prop_types])
+
     def _assert_types(self, default_data):
         for p_name in self.scheme['properties']:
             prop = self.scheme['properties'][p_name]
-            if prop["type"] in _types_checks:
-                for type_ex in _types_checks[prop["type"]]:
-                    data = default_data.copy()
-                    value = type_ex
-                    value_str = str(value)
-                    if isinstance(value, str):
-                        value_str = "'%s'" % value_str
-                    data.update({p_name: value})
-                    message = ("%s is not of type '%s'" %
-                               (value_str, prop["type"]))
-                    if "enum" in prop:
-                        message = [message, "%s is not one of %s" %
-                                            (value_str, prop["enum"])]
-                    self._assert_create_object_validation(
-                        data=data,
-                        bad_req_i=(1, 'VALIDATION_ERROR', message)
-                    )
+            prop_types = prop["type"]
+            if type(prop_types) is not list:
+                prop_types = [prop_types]
+            for prop_type in prop_types:
+                if prop_type in _types_checks:
+                    for type_ex in _types_checks[prop_type]:
+                        data = default_data.copy()
+                        value = type_ex
+                        value_str = str(value)
+                        if isinstance(value, str):
+                            value_str = "'%s'" % value_str
+                        data.update({p_name: value})
+                        message = ("%s is not of type %s" %
+                                   (value_str,
+                                    self._prop_types_str(prop_types)))
+                        if "enum" in prop:
+                            message = [message, "%s is not one of %s" %
+                                                (value_str, prop["enum"])]
+                        self._assert_create_object_validation(
+                            data=data,
+                            bad_req_i=(1, 'VALIDATION_ERROR', message)
+                        )
 
     def _assert_cluster_configs_validation(self, require_image_id=False):
         data = {
@@ -414,7 +423,7 @@ class ValidationTestCase(base.SaharaTestCase):
         self._assert_create_object_validation(
             data=data,
             bad_req_i=(1, 'INVALID_REFERENCE',
-                       "Tags of requested image "
+                       "Requested image "
                        "'813fe450-40d2-4acc-ade5-ea753a1bd5bc' "
-                       "don't contain required tags "
-                       "['vanilla', '1.2.1']"))
+                       "doesn't contain required tags: "
+                       "['1.2.1']"))

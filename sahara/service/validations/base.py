@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import collections
-import operator
 
 import novaclient.exceptions as nova_ex
 from oslo_config import cfg
@@ -170,9 +169,11 @@ def check_flavor_exists(flavor_id):
 
 def check_security_groups_exist(security_groups):
     security_group_list = nova.client().security_groups.list()
-    allowed_groups = set(reduce(
-        operator.add, [[six.text_type(sg.id), sg.name]
-                       for sg in security_group_list], []))
+    allowed_groups = set()
+    for sg in security_group_list:
+        allowed_groups.add(six.text_type(sg.id))
+        allowed_groups.add(sg.name)
+
     for sg in security_groups:
         if sg not in allowed_groups:
             raise ex.NotFoundException(
@@ -395,9 +396,9 @@ def check_required_image_tags(plugin_name, hadoop_version, image_id):
     image = api.get_image(id=image_id)
     plugin = plugin_base.PLUGINS.get_plugin(plugin_name)
     req_tags = set(plugin.get_required_image_tags(hadoop_version))
-    if not req_tags.issubset(set(image.tags)):
-            raise ex.InvalidReferenceException(
-                _("Tags of requested image '%(image)s' don't contain required"
-                  " tags ['%(name)s', '%(version)s']")
-                % {'image': image_id, 'name': plugin_name,
-                   'version': hadoop_version})
+    req_tags = list(req_tags.difference(set(image.tags)))
+    if req_tags:
+        raise ex.InvalidReferenceException(
+            _("Requested image '%(image)s' doesn't contain required"
+              " tags: %(tags)s")
+            % {'image': image_id, 'tags': req_tags})
