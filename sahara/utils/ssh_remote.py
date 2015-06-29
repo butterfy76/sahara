@@ -54,7 +54,6 @@ from sahara import exceptions as ex
 from sahara.i18n import _
 from sahara.i18n import _LE
 from sahara.utils import crypto
-from sahara.utils import hashabledict as h
 from sahara.utils.openstack import base
 from sahara.utils.openstack import neutron
 from sahara.utils import procutils
@@ -543,7 +542,7 @@ class InstanceInteropHelper(remote.Remote):
     def get_neutron_info(self, instance=None):
         if not instance:
             instance = self.instance
-        neutron_info = h.HashableDict()
+        neutron_info = dict()
         neutron_info['network'] = instance.cluster.neutron_management_network
         ctx = context.current()
         neutron_info['uri'] = base.url_for(ctx.service_catalog, 'network')
@@ -705,8 +704,8 @@ class InstanceInteropHelper(remote.Remote):
         session = _sessions.get((host, port), None)
         if session is None:
             raise ex.NotFoundException(
-                _('Session for %(host)s:%(port)s not cached') % {
-                    'host': host, 'port': port})
+                {'host': host, 'port': port},
+                _('Session for %(host)s:%(port)s not cached'))
 
         session.close()
         del _sessions[(host, port)]
