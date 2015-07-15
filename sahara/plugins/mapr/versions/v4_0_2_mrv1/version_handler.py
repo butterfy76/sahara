@@ -54,8 +54,10 @@ class VersionHandler(bvh.BaseVersionHandler):
             hive.HiveV012(),
             hive.HiveV013(),
             flume.Flume(),
-            hbase.HBaseV098(),
-            hue.Hue(),
+            hbase.HBaseV0987(),
+            hbase.HBaseV0989(),
+            hue.HueV360(),
+            hue.HueV370(),
             httpfs.HttpFS(),
             mahout.Mahout(),
             pig.PigV013(),
@@ -63,7 +65,9 @@ class VersionHandler(bvh.BaseVersionHandler):
             sqoop2.Sqoop2(),
             impala.ImpalaV141(),
             swift.Swift(),
-            drill.Drill()
+            drill.DrillV07(),
+            drill.DrillV08(),
+            drill.DrillV09(),
         ]
 
     def get_context(self, cluster, added=None, removed=None):
