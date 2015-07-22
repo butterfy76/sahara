@@ -114,7 +114,7 @@ SCHEMA = {
                                         "minLength": 1
                                     }
                                 },
-                                "flavor_id": {
+                                "flavor": {
                                     "type": "string",
                                     "minLength": 1
                                 },
@@ -158,8 +158,7 @@ SCHEMA = {
                                     "type": "boolean"
                                 }
                             },
-                            "required": ["name", "flavor_id",
-                                         "node_processes"],
+                            "required": ["name", "flavor", "node_processes"],
                             "additionalProperties": False
                         }
                     },

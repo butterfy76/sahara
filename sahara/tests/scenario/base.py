@@ -387,6 +387,8 @@ class BaseTestCase(base.BaseTestCase):
         for ng in node_groups:
             kwargs = dict(ng)
             kwargs.update(self.plugin_opts)
+            kwargs['flavor_id'] = self.nova.get_flavor_id(kwargs['flavor'])
+            del kwargs['flavor']
             kwargs['name'] = utils.rand_name(kwargs['name'])
             kwargs['floating_ip_pool'] = floating_ip_pool
             ng_id = self.__create_node_group_template(**kwargs)
