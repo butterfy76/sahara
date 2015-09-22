@@ -79,15 +79,13 @@ class EdpSparkEngine(edp_spark_engine.SparkJobEngine):
 
     def __init__(self, cluster):
         super(EdpSparkEngine, self).__init__(cluster)
-        self.master = u.get_instance(cluster, "CLOUDERA_MANAGER")
+        self.master = u.get_instance(cluster, "SPARK_YARN_HISTORY_SERVER")
         self.plugin_params["spark-user"] = "sudo -u spark "
         self.plugin_params["spark-submit"] = "spark-submit"
         self.plugin_params["deploy-mode"] = "cluster"
         self.plugin_params["master"] = "yarn-cluster"
         driver_cp = u.get_config_value_or_default(
             "Spark", "Executor extra classpath", self.cluster)
-        if driver_cp:
-            driver_cp = " --driver-class-path " + driver_cp
         self.plugin_params["driver-class-path"] = driver_cp
 
     @staticmethod

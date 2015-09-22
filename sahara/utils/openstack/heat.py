@@ -28,7 +28,10 @@ opts = [
                 help='Allow to perform insecure SSL requests to heat.'),
     cfg.StrOpt('ca_file',
                help='Location of ca certificates file to use for heat '
-                    'client requests.')
+                    'client requests.'),
+    cfg.StrOpt("endpoint_type",
+               default="internalURL",
+               help="Endpoint type for heat client requests")
 ]
 
 heat_group = cfg.OptGroup(name='heat',
@@ -41,7 +44,8 @@ CONF.register_opts(opts, group=heat_group)
 
 def client():
     ctx = context.current()
-    heat_url = base.url_for(ctx.service_catalog, 'orchestration')
+    heat_url = base.url_for(ctx.service_catalog, 'orchestration',
+                            endpoint_type=CONF.heat.endpoint_type)
     return heat_client.Client('1', heat_url, token=ctx.auth_token,
                               cert_file=CONF.heat.ca_file,
                               insecure=CONF.heat.api_insecure,
@@ -51,7 +55,8 @@ def client():
 
 def get_stack(stack_name, raise_on_missing=True):
     for stack in base.execute_with_retries(
-            client().stacks.list, filters={'name': stack_name}):
+            client().stacks.list, show_hidden=True,
+            filters={'name': stack_name}):
         return stack
 
     if not raise_on_missing:

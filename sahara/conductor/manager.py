@@ -30,6 +30,8 @@ CLUSTER_DEFAULTS = {
     "info": {},
     "rollback_info": {},
     "sahara_info": {},
+    "is_public": False,
+    "is_protected": False
 }
 
 NODE_GROUP_DEFAULTS = {
@@ -48,12 +50,39 @@ NODE_GROUP_DEFAULTS = {
     "volume_local_to_instance": False,
 }
 
+NODE_GROUP_TEMPLATE_DEFAULTS = copy.deepcopy(NODE_GROUP_DEFAULTS)
+NODE_GROUP_TEMPLATE_DEFAULTS.update({"is_public": False,
+                                     "is_protected": False})
+
 INSTANCE_DEFAULTS = {
-    "volumes": []
+    "volumes": [],
+    "storage_devices_number": 0
 }
 
 DATA_SOURCE_DEFAULTS = {
-    "credentials": {}
+    "credentials": {},
+    "is_public": False,
+    "is_protected": False
+}
+
+JOB_DEFAULTS = {
+    "is_public": False,
+    "is_protected": False
+}
+
+JOB_BINARY_DEFAULTS = {
+    "is_public": False,
+    "is_protected": False
+}
+
+JOB_BINARY_INTERNAL_DEFAULTS = {
+    "is_public": False,
+    "is_protected": False
+}
+
+JOB_EXECUTION_DEFAULTS = {
+    "is_public": False,
+    "is_protected": False
 }
 
 
@@ -152,6 +181,8 @@ class ConductorManager(db_base.Base):
             del c_tmpl['created_at']
             del c_tmpl['updated_at']
             del c_tmpl['id']
+            del c_tmpl['is_public']
+            del c_tmpl['is_protected']
 
             # updating with cluster_template values
             merged_values.update(c_tmpl)
@@ -283,7 +314,7 @@ class ConductorManager(db_base.Base):
     def node_group_template_create(self, context, values):
         """Create a Node Group Template from the values dictionary."""
         values = copy.deepcopy(values)
-        values = _apply_defaults(values, NODE_GROUP_DEFAULTS)
+        values = _apply_defaults(values, NODE_GROUP_TEMPLATE_DEFAULTS)
         values['tenant_id'] = context.tenant_id
 
         return self.db.node_group_template_create(context, values)
@@ -375,11 +406,13 @@ class ConductorManager(db_base.Base):
     def job_execution_create(self, context, values):
         """Create a JobExecution from the values dictionary."""
         values = copy.deepcopy(values)
+        values = _apply_defaults(values, JOB_EXECUTION_DEFAULTS)
         values['tenant_id'] = context.tenant_id
         return self.db.job_execution_create(context, values)
 
     def job_execution_update(self, context, job_execution, values):
         """Updates a JobExecution from the values dictionary."""
+        values = copy.deepcopy(values)
         return self.db.job_execution_update(context, job_execution, values)
 
     def job_execution_destroy(self, context, job_execution):
@@ -402,6 +435,7 @@ class ConductorManager(db_base.Base):
     def job_create(self, context, values):
         """Create a Job from the values dictionary."""
         values = copy.deepcopy(values)
+        values = _apply_defaults(values, JOB_DEFAULTS)
         values['tenant_id'] = context.tenant_id
         return self.db.job_create(context, values)
 
@@ -430,6 +464,7 @@ class ConductorManager(db_base.Base):
         """Create a JobBinary from the values dictionary."""
 
         values = copy.deepcopy(values)
+        values = _apply_defaults(values, JOB_BINARY_DEFAULTS)
         values['tenant_id'] = context.tenant_id
         return self.db.job_binary_create(context, values)
 
@@ -469,6 +504,7 @@ class ConductorManager(db_base.Base):
         # here the deepcopy of values only incs a reference count on data.
         # This is nice, since data could be big...
         values = copy.deepcopy(values)
+        values = _apply_defaults(values, JOB_BINARY_INTERNAL_DEFAULTS)
         values['tenant_id'] = context.tenant_id
         return self.db.job_binary_internal_create(context, values)
 
@@ -482,6 +518,10 @@ class ConductorManager(db_base.Base):
         return self.db.job_binary_internal_get_raw_data(
             context,
             job_binary_internal_id)
+
+    def job_binary_internal_update(self, context, id, values):
+        """Updates a JobBinaryInternal from the values dictionary."""
+        return self.db.job_binary_internal_update(context, id, values)
 
     # Events ops
 

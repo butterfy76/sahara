@@ -51,7 +51,7 @@ class TestStorm(base.SaharaTestCase):
         self.assertEqual(("topology_name", "instance"),
                          (topology_name, inst_id))
 
-    @mock.patch('sahara.utils.general.get_instances')
+    @mock.patch('sahara.utils.cluster.get_instances')
     def test_get_instance_if_running(self, get_instances):
         '''Test retrieval of topology_name and instance object for running job
 
@@ -70,11 +70,11 @@ class TestStorm(base.SaharaTestCase):
         job_exec = mock.Mock()
         eng = se.StormJobEngine("cluster")
 
-        job_exec.oozie_job_id = "invalid id"
+        job_exec.engine_job_id = "invalid id"
         self.assertEqual((None, None),
                          eng._get_instance_if_running(job_exec))
 
-        job_exec.oozie_job_id = "topology_name@inst_id"
+        job_exec.engine_job_id = "topology_name@inst_id"
         for state in edp.JOB_STATUSES_TERMINATED:
             job_exec.info = {'status': state}
             self.assertEqual((None, None),
@@ -96,7 +96,7 @@ class TestStorm(base.SaharaTestCase):
         self.assertIsNone(instance)
 
     @mock.patch('sahara.plugins.utils.get_instance')
-    @mock.patch('sahara.utils.general.get_instances')
+    @mock.patch('sahara.utils.cluster.get_instances')
     @mock.patch('sahara.utils.remote.get_remote')
     @mock.patch('sahara.conductor.API.job_get')
     @mock.patch('sahara.context.ctx', return_value="ctx")
@@ -119,7 +119,7 @@ class TestStorm(base.SaharaTestCase):
         get_instances.return_value = ["instance"]
 
         # Pretend process is running
-        job_exec.oozie_job_id = "topology_name@inst_id"
+        job_exec.engine_job_id = "topology_name@inst_id"
         job_exec.info = {'status': edp.JOB_STATUS_RUNNING}
         job_exec.job_configs = {"configs": {"topology_name": "topology_name"}}
         status = eng._get_job_status_from_remote(job_exec)
@@ -184,7 +184,7 @@ class TestStorm(base.SaharaTestCase):
                        '_get_job_status_from_remote',
                        autospec=True,
                        return_value={"status": edp.JOB_STATUS_KILLED})
-    @mock.patch('sahara.utils.general.get_instances')
+    @mock.patch('sahara.utils.cluster.get_instances')
     @mock.patch('sahara.plugins.utils.get_instance')
     @mock.patch('sahara.utils.remote.get_remote')
     def test_cancel_job(self, get_remote, get_instance, get_instances,
@@ -199,7 +199,7 @@ class TestStorm(base.SaharaTestCase):
             return_value=master_instance)
         eng = se.StormJobEngine("cluster")
         job_exec = mock.Mock()
-        job_exec.oozie_job_id = "topology_name@inst_id"
+        job_exec.engine_job_id = "topology_name@inst_id"
         job_exec.info = {'status': edp.JOB_STATUS_RUNNING}
         job_exec.job_configs = {"configs": {"topology_name": "topology_name"}}
         status = eng.cancel_job(job_exec)
@@ -233,6 +233,8 @@ class TestStorm(base.SaharaTestCase):
         remote_instance = mock.Mock()
         get_remote.return_value.__enter__ = mock.Mock(
             return_value=remote_instance)
+        remote_instance.instance.node_group.cluster.shares = []
+        remote_instance.instance.node_group.shares = []
 
         get_raw_binary.return_value = "data"
 

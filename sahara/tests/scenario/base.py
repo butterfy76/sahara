@@ -90,6 +90,11 @@ class BaseTestCase(base.BaseTestCase):
             self.nova.get_image_id(self.testcase['image'])).username
         self.private_key, self.public_key = ssh.generate_key_pair()
         self.key_name = self.__create_keypair()
+        # save the private key if retain_resources is specified
+        # (useful for debugging purposes)
+        if self.testcase['retain_resources']:
+            with open(self.key_name + '.key', 'a') as private_key_file:
+                private_key_file.write(self.private_key)
         self.plugin_opts = {
             'plugin_name': self.testcase['plugin_name'],
             'hadoop_version': self.testcase['plugin_version']
@@ -104,8 +109,10 @@ class BaseTestCase(base.BaseTestCase):
         sahara_service_type = self.credentials['sahara_service_type']
         sahara_url = self.credentials['sahara_url']
 
-        session = clients.get_session(
-            auth_url, username, password, tenant_name)
+        session = clients.get_session(auth_url, username, password,
+                                      tenant_name,
+                                      self.credentials['ssl_verify'],
+                                      self.credentials['ssl_cert'])
 
         self.sahara = clients.SaharaClient(session=session,
                                            service_type=sahara_service_type,
@@ -113,10 +120,13 @@ class BaseTestCase(base.BaseTestCase):
         self.nova = clients.NovaClient(session=session)
         self.neutron = clients.NeutronClient(session=session)
         # swiftclient doesn't support keystone sessions
-        self.swift = clients.SwiftClient(authurl=auth_url,
-                                         user=username,
-                                         key=password,
-                                         tenant_name=tenant_name)
+        self.swift = clients.SwiftClient(
+            authurl=auth_url,
+            user=username,
+            key=password,
+            insecure=not self.credentials['ssl_verify'],
+            cacert=self.credentials['ssl_cert'],
+            tenant_name=tenant_name)
 
     def create_cluster(self):
         self.ng_id_map = self._create_node_group_templates()
@@ -140,6 +150,23 @@ class BaseTestCase(base.BaseTestCase):
                     break
                 time.sleep(5)
 
+    def _inject_datasources_data(self, arg, input_url, output_url):
+        return arg.format(
+            input_datasource=input_url, output_datasource=output_url)
+
+    def _put_io_data_to_configs(self, configs, input_id, output_id):
+        input_url, output_url = None, None
+        if input_id is not None:
+            input_url = self.sahara.get_datasource(
+                data_source_id=input_id).url
+        if output_id is not None:
+            output_url = self.sahara.get_datasource(
+                data_source_id=output_id).url
+        pl = lambda x: self._inject_datasources_data(x, input_url, output_url)
+        args = list(map(pl, configs.get('args', [])))
+        configs['args'] = args
+        return configs
+
     @track_result("Check EDP jobs", False)
     def check_run_jobs(self):
         jobs = {}
@@ -154,6 +181,8 @@ class BaseTestCase(base.BaseTestCase):
             main_libs, additional_libs = self._create_job_binaries(job)
             job_id = self._create_job(job['type'], main_libs, additional_libs)
             configs = self._parse_job_configs(job)
+            configs = self._put_io_data_to_configs(
+                configs, input_id, output_id)
             pre_exec.append([job_id, input_id, output_id, configs])
 
         job_exec_ids = []
@@ -384,16 +413,34 @@ class BaseTestCase(base.BaseTestCase):
                 with open(template_file) as data:
                     node_groups.append(json.load(data))
 
+        check_indirect_access = False
+        for ng in node_groups:
+            if ng.get('is_proxy_gateway'):
+                check_indirect_access = True
+
         for ng in node_groups:
             kwargs = dict(ng)
             kwargs.update(self.plugin_opts)
-            kwargs['flavor_id'] = self.nova.get_flavor_id(kwargs['flavor'])
+            kwargs['flavor_id'] = self._get_flavor_id(kwargs['flavor'])
             del kwargs['flavor']
             kwargs['name'] = utils.rand_name(kwargs['name'])
-            kwargs['floating_ip_pool'] = floating_ip_pool
+            if (not kwargs.get('is_proxy_gateway',
+                               False)) and (check_indirect_access):
+                kwargs['floating_ip_pool'] = None
+            else:
+                kwargs['floating_ip_pool'] = floating_ip_pool
             ng_id = self.__create_node_group_template(**kwargs)
             ng_id_map[ng['name']] = ng_id
         return ng_id_map
+
+    @track_result("Set flavor")
+    def _get_flavor_id(self, flavor):
+        if isinstance(flavor, str):
+            return self.nova.get_flavor_id(flavor)
+        else:
+            flavor_id = self.nova.create_flavor(flavor).id
+            self.addCleanup(self.nova.delete_flavor, flavor_id)
+            return flavor_id
 
     @track_result("Create cluster template")
     def _create_cluster_template(self):

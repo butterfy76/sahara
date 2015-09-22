@@ -29,9 +29,9 @@ from sahara.service.edp import base_engine
 from sahara.service.edp.binary_retrievers import dispatch
 from sahara.service.edp import job_utils
 from sahara.service.validations.edp import job_execution as j
+from sahara.utils import cluster as cluster_utils
 from sahara.utils import edp
 from sahara.utils import files
-from sahara.utils import general
 from sahara.utils import remote
 
 conductor = c.API
@@ -53,7 +53,7 @@ class StormJobEngine(base_engine.JobEngine):
 
     def _get_instance_if_running(self, job_execution):
         topology_name, inst_id = self._get_topology_and_inst_id(
-            job_execution.oozie_job_id)
+            job_execution.engine_job_id)
         if not topology_name or not inst_id or (
            job_execution.info['status'] in edp.JOB_STATUSES_TERMINATED):
             return None, None
@@ -63,14 +63,14 @@ class StormJobEngine(base_engine.JobEngine):
         # is gone, we should probably change the status somehow.
         # For now, do nothing.
         try:
-            instance = general.get_instances(self.cluster, [inst_id])[0]
+            instance = cluster_utils.get_instances(self.cluster, [inst_id])[0]
         except Exception:
             instance = None
         return topology_name, instance
 
     def _get_topology_name(self, job_execution):
         topology_name, inst_id = self._get_topology_and_inst_id(
-            job_execution.oozie_job_id)
+            job_execution.engine_job_id)
 
         return topology_name
 
@@ -110,8 +110,13 @@ class StormJobEngine(base_engine.JobEngine):
 
         def upload(r, dir, job_file, proxy_configs):
             dst = os.path.join(dir, job_file.name)
-            raw_data = dispatch.get_raw_binary(job_file, proxy_configs)
-            r.write_file_to(dst, raw_data)
+            raw_data = dispatch.get_raw_binary(job_file,
+                                               proxy_configs=proxy_configs,
+                                               remote=remote)
+            if isinstance(raw_data, dict) and raw_data["type"] == "path":
+                dst = raw_data['path']
+            else:
+                r.write_file_to(dst, raw_data)
             return dst
 
         uploaded_paths = []
@@ -164,15 +169,25 @@ class StormJobEngine(base_engine.JobEngine):
         ctx = context.ctx()
         job = conductor.job_get(ctx, job_execution.job_id)
 
+        # This will be a dictionary of tuples, (native_url, runtime_url)
+        # keyed by data_source id
         data_source_urls = {}
 
         additional_sources, updated_job_configs = (
-            job_utils.resolve_data_source_references(
-                job_execution.job_configs, job_execution.id, data_source_urls)
+            job_utils.resolve_data_source_references(job_execution.job_configs,
+                                                     job_execution.id,
+                                                     data_source_urls,
+                                                     self.cluster)
         )
 
         job_execution = conductor.job_execution_update(
-            ctx, job_execution, {"data_source_urls": data_source_urls})
+            ctx, job_execution,
+            {"data_source_urls": job_utils.to_url_dict(data_source_urls)})
+
+        # Now that we've recorded the native urls, we can switch to the
+        # runtime urls
+        data_source_urls = job_utils.to_url_dict(data_source_urls,
+                                                 runtime=True)
 
         # We'll always run the driver program on the master
         master = plugin_utils.get_instance(self.cluster, "nimbus")

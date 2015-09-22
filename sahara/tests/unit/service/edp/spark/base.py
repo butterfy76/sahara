@@ -42,7 +42,7 @@ class TestSpark(base.SaharaTestCase):
         self.spark_pid = "12345"
         self.spark_home = "/opt/spark"
         self.workflow_dir = "/wfdir"
-        self.driver_cp = "/usr/lib/hadoop/hadoop-swift.jar"
+        self.driver_cp = "/usr/lib/hadoop/hadoop-swift.jar:"
 
     def test_get_pid_and_inst_id(self):
         '''Test parsing of job ids
@@ -59,7 +59,7 @@ class TestSpark(base.SaharaTestCase):
         pid, inst_id = eng._get_pid_and_inst_id("pid@instance")
         self.assertEqual(("pid", "instance"), (pid, inst_id))
 
-    @mock.patch('sahara.utils.general.get_instances')
+    @mock.patch('sahara.utils.cluster.get_instances')
     def test_get_instance_if_running(self, get_instances):
         '''Test retrieval of pid and instance object for running job
 
@@ -77,11 +77,11 @@ class TestSpark(base.SaharaTestCase):
         job_exec = mock.Mock()
         eng = se.SparkJobEngine("cluster")
 
-        job_exec.oozie_job_id = "invalid id"
+        job_exec.engine_job_id = "invalid id"
         self.assertEqual((None, None),
                          eng._get_instance_if_running(job_exec))
 
-        job_exec.oozie_job_id = "pid@inst_id"
+        job_exec.engine_job_id = "pid@inst_id"
         for state in edp.JOB_STATUSES_TERMINATED:
             job_exec.info = {'status': state}
             self.assertEqual((None, None),
@@ -347,6 +347,8 @@ class TestSpark(base.SaharaTestCase):
 
         # This is to mock "with remote.get_remote(instance) as r"
         remote_instance = mock.Mock()
+        remote_instance.instance.node_group.cluster.shares = []
+        remote_instance.instance.node_group.shares = []
         get_remote.return_value.__enter__ = mock.Mock(
             return_value=remote_instance)
 

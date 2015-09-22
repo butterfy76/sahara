@@ -46,7 +46,7 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
+                'plugin_name': 'fake',
             },
             bad_req_i=(1, "VALIDATION_ERROR",
                        u"'hadoop_version' is a required property")
@@ -55,8 +55,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1'
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1'
             },
             bad_req_i=(1, "VALIDATION_ERROR",
                        u"'node_processes' is a required property")
@@ -65,8 +65,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': "a",
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': []
             },
             bad_req_i=(1, 'VALIDATION_ERROR',
@@ -77,8 +77,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
         data = {
             'name': 'a',
             'flavor_id': '42',
-            'plugin_name': 'vanilla',
-            'hadoop_version': '1.2.1',
+            'plugin_name': 'fake',
+            'hadoop_version': '0.1',
             'node_processes': ['namenode']
         }
         self._assert_valid_name_hostname_validation(data)
@@ -88,8 +88,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': "a",
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ["namenode", "namenode"]
             },
             bad_req_i=(1, 'INVALID_DATA',
@@ -99,8 +99,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['wrong_process']
             },
             bad_req_i=(1, 'INVALID_REFERENCE',
@@ -120,19 +120,14 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['namenode',
                                    'datanode',
-                                   'secondarynamenode',
                                    'tasktracker',
                                    'jobtracker'],
                 'image_id': '550e8400-e29b-41d4-a716-446655440000',
-                'node_configs': {
-                    'HDFS': {
-                        u'hadoop.tmp.dir': '/temp/'
-                    }
-                },
+                'node_configs': {},
                 'volumes_per_node': 2,
                 'volumes_size': 10,
                 'volume_type': 'fish',
@@ -144,7 +139,9 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
                 'auto_security_group': False,
                 'availability_zone': 'here',
                 'is_proxy_gateway': False,
-                'volume_local_to_instance': False
+                'volume_local_to_instance': False,
+                'is_public': False,
+                'is_protected': False
             }
         )
 
@@ -153,11 +150,10 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['namenode',
                                    'datanode',
-                                   'secondarynamenode',
                                    'tasktracker',
                                    'jobtracker'],
 
@@ -173,7 +169,9 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
                 'auto_security_group': None,
                 'availability_zone': None,
                 'is_proxy_gateway': None,
-                'volume_local_to_instance': None
+                'volume_local_to_instance': None,
+                'is_public': None,
+                'is_protected': None
             }
         )
 
@@ -182,8 +180,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['wrong_process'],
                 'volumes_per_node': -1
             },
@@ -194,8 +192,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['wrong_process'],
                 'volumes_size': 0
             },
@@ -206,8 +204,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
     def test_ng_template_create_v_types(self):
         default_data = {
             'name': 'a', 'flavor_id': '42',
-            'plugin_name': 'vanilla',
-            'hadoop_version': '1.2.1',
+            'plugin_name': 'fake',
+            'hadoop_version': '0.1',
             'node_processes': ['namenode']
         }
         self._assert_types(default_data)
@@ -216,8 +214,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
         data = {
             'name': 'test',
             'flavor_id': '42',
-            'plugin_name': 'vanilla',
-            'hadoop_version': '1.2.1',
+            'plugin_name': 'fake',
+            'hadoop_version': '0.1',
             'node_processes': ['namenode']}
         self._assert_create_object_validation(
             data=data,
@@ -230,8 +228,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'test-ng',
                 'flavor_id': '1',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['namenode']
             },
             bad_req_i=(1, 'NOT_FOUND',
@@ -243,12 +241,12 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'test-ng',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['namenode'],
                 'node_configs': {
                     'wrong_target': {
-                        u'hadoop.tmp.dir': '/temp/'
+                        u'mapreduce.task.tmp.dir': '/temp/'
                     }
                 }},
             bad_req_i=(1, 'INVALID_REFERENCE',
@@ -259,17 +257,17 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'test-ng',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['namenode'],
                 'node_configs': {
-                    'HDFS': {
+                    'general': {
                         's': 'a'
                     }
                 }
             },
             bad_req_i=(1, 'INVALID_REFERENCE',
-                       "Plugin's applicable target 'HDFS' doesn't "
+                       "Plugin's applicable target 'general' doesn't "
                        "contain config with name 's'")
         )
 
@@ -278,8 +276,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['wrong_process'],
                 'volumes_per_node': -1
             },
@@ -290,8 +288,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['wrong_process'],
                 'volumes_size': 0
             },
@@ -302,8 +300,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['datanode', 'tasktracker'],
                 'volumes_per_node': 1,
                 'volumes_size': 1,
@@ -313,8 +311,8 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
         data = {
             'name': 'a',
             'flavor_id': '42',
-            'plugin_name': 'vanilla',
-            'hadoop_version': '1.2.1',
+            'plugin_name': 'fake',
+            'hadoop_version': '0.1',
             'node_processes': ['datanode', 'tasktracker'],
             'volumes_per_node': 1,
             'volumes_size': 1,
@@ -330,11 +328,25 @@ class TestNGTemplateCreateValidation(u.ValidationTestCase):
             data={
                 'name': 'a',
                 'flavor_id': '42',
-                'plugin_name': 'vanilla',
-                'hadoop_version': '1.2.1',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
                 'node_processes': ['datanode', 'tasktracker'],
                 'floating_ip_pool': 'network_bad'
             },
             bad_req_i=(1, 'NOT_FOUND', "Floating IP pool network_bad "
                                        "not found")
+        )
+
+    def test_volumes_per_node_without_volumes_size(self):
+        self._assert_create_object_validation(
+            data={
+                'name': 'a',
+                'flavor_id': '42',
+                'plugin_name': 'fake',
+                'hadoop_version': '0.1',
+                'node_processes': ['datanode', 'tasktracker'],
+                'volumes_per_node': 1
+            },
+            bad_req_i=(1, 'INVALID_REFERENCE', "You must specify a "
+                                               "volumes_size parameter")
         )

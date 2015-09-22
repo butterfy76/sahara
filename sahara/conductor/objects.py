@@ -62,6 +62,8 @@ class Cluster(object):
     cluster_template_id
     cluster_template - ClusterTemplate object
     use_autoconfig
+    is_public
+    is_protected
     """
 
     def has_proxy_gateway(self):
@@ -129,18 +131,6 @@ class NodeGroup(object):
         return configs.merge_configs(self.cluster.cluster_configs,
                                      self.node_configs)
 
-    def storage_paths(self):
-        mp = []
-        for idx in range(1, self.volumes_per_node + 1):
-            mp.append(self.volume_mount_prefix + str(idx))
-
-        # Here we assume that NG's instances use ephemeral
-        # drives for storage if volumes_per_node == 0
-        if not mp:
-            mp = ['/mnt']
-
-        return mp
-
     def get_image_id(self):
         return self.image_id or self.cluster.default_image_id
 
@@ -156,6 +146,7 @@ class Instance(object):
     internal_ip
     management_ip
     volumes
+    storage_devices_number
     """
 
     def hostname(self):
@@ -166,6 +157,16 @@ class Instance(object):
 
     def remote(self):
         return remote.get_remote(self)
+
+    def storage_paths(self):
+        mp = []
+        for idx in range(1, self.storage_devices_number + 1):
+            mp.append(self.node_group.volume_mount_prefix + str(idx))
+
+        if not mp:
+            mp = ['/mnt']
+
+        return mp
 
 
 class ClusterTemplate(object):
@@ -182,6 +183,8 @@ class ClusterTemplate(object):
     plugin_name
     hadoop_version
     node_groups - list of NodeGroup objects
+    is_public
+    is_protected
     """
 
 
@@ -210,6 +213,8 @@ class NodeGroupTemplate(object):
     availability_zone
     is_proxy_gateway
     volume_local_to_instance
+    is_public
+    is_protected
     """
 
 
@@ -225,6 +230,8 @@ class DataSource(object):
     type
     url
     credentials
+    is_public
+    is_protected
     """
 
 
@@ -240,12 +247,14 @@ class JobExecution(object):
     end_time
     cluster_id
     info
-    oozie_job_id
+    engine_job_id
     return_code
     job_configs
     interface
     extra
     data_source_urls
+    is_public
+    is_protected
     """
 
 
@@ -260,6 +269,8 @@ class Job(object):
     mains
     libs
     interface
+    is_public
+    is_protected
     """
 
 
@@ -272,6 +283,8 @@ class JobBinary(object):
     description
     url -  URLs may be the following: internal-db://URL, swift://
     extra - extra may contain not only user-password but e.g. auth-token
+    is_public
+    is_protected
     """
 
 
@@ -286,6 +299,8 @@ class JobBinaryInternal(object):
     tenant_id
     name
     datasize
+    is_public
+    is_protected
     """
 
 # Events ops

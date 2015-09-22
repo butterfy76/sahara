@@ -16,6 +16,7 @@
 import itertools
 
 from oslo_config import cfg
+from oslo_config import types
 from oslo_log import log
 
 from sahara import exceptions as ex
@@ -28,12 +29,14 @@ from sahara.utils.openstack import keystone
 from sahara.utils import remote
 from sahara import version
 
+PORT_TYPE = types.Integer(1, 65535)
+
 
 cli_opts = [
     cfg.StrOpt('host', default='',
                help='Hostname or IP address that will be used to listen on.'),
-    cfg.IntOpt('port', default=8386,
-               help='Port that will be used to listen on.'),
+    cfg.Opt('port', default=8386, type=PORT_TYPE,
+            help='Port that will be used to listen on.'),
     cfg.BoolOpt('log-exchange', default=False,
                 help='Log request/response exchange details: environ, '
                      'headers and bodies.')
@@ -126,6 +129,7 @@ def list_opts():
     from sahara.conductor import api
     from sahara import main as sahara_main
     from sahara.service.edp import job_utils
+    from sahara.service.heat import heat_engine
     from sahara.service import periodic
     from sahara.utils import cluster_progress_ops as cpo
     from sahara.utils.openstack import base
@@ -154,7 +158,8 @@ def list_opts():
                          proxy.opts,
                          cpo.event_log_opts,
                          wsgi.wsgi_opts,
-                         base.opts)),
+                         base.opts,
+                         heat_engine.heat_engine_opts)),
         (poll_utils.timeouts.name,
          itertools.chain(poll_utils.timeouts_opts)),
         (api.conductor_group.name,

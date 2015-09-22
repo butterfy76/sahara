@@ -90,23 +90,25 @@ class OozieJobEngine(base_engine.JobEngine):
         return "%s/workflow.xml" % job_dir
 
     def cancel_job(self, job_execution):
-        if job_execution.oozie_job_id is not None:
+        if job_execution.engine_job_id is not None:
             client = self._get_client()
             client.kill_job(job_execution)
             return client.get_job_status(job_execution)
 
     def get_job_status(self, job_execution):
-        if job_execution.oozie_job_id is not None:
+        if job_execution.engine_job_id is not None:
             return self._get_client().get_job_status(job_execution)
 
     def run_job(self, job_execution):
         ctx = context.ctx()
 
+        # This will be a dictionary of tuples, (native_url, runtime_url)
+        # keyed by data_source id
         data_source_urls = {}
 
         job = conductor.job_get(ctx, job_execution.job_id)
         input_source, output_source = job_utils.get_data_sources(
-            job_execution, job, data_source_urls)
+            job_execution, job, data_source_urls, self.cluster)
 
         # Updated_job_configs will be a copy of job_execution.job_configs with
         # any name or uuid references to data_sources resolved to paths
@@ -115,12 +117,20 @@ class OozieJobEngine(base_engine.JobEngine):
         # just be a reference to job_execution.job_configs to avoid a copy.
         # Additional_sources will be a list of any data_sources found.
         additional_sources, updated_job_configs = (
-            job_utils.resolve_data_source_references(
-                job_execution.job_configs, job_execution.id, data_source_urls)
+            job_utils.resolve_data_source_references(job_execution.job_configs,
+                                                     job_execution.id,
+                                                     data_source_urls,
+                                                     self.cluster)
         )
 
         job_execution = conductor.job_execution_update(
-            ctx, job_execution, {"data_source_urls": data_source_urls})
+            ctx, job_execution,
+            {"data_source_urls": job_utils.to_url_dict(data_source_urls)})
+
+        # Now that we've recorded the native urls, we can switch to the
+        # runtime urls
+        data_source_urls = job_utils.to_url_dict(data_source_urls,
+                                                 runtime=True)
 
         proxy_configs = updated_job_configs.get('proxy_configs')
         configs = updated_job_configs.get('configs', {})
@@ -174,6 +184,12 @@ class OozieJobEngine(base_engine.JobEngine):
         job_execution = conductor.job_execution_get(ctx, job_execution.id)
         if job_execution.info['status'] == edp.JOB_STATUS_TOBEKILLED:
             return (None, edp.JOB_STATUS_KILLED, None)
+
+        conductor.job_execution_update(
+            context.ctx(), job_execution.id,
+            {'info': {'status': edp.JOB_STATUS_READYTORUN},
+             'engine_job_id': oozie_job_id})
+
         client.run_job(job_execution, oozie_job_id)
         try:
             status = client.get_job_status(job_execution,
@@ -247,15 +263,27 @@ class OozieJobEngine(base_engine.JobEngine):
 
         with remote.get_remote(where) as r:
             for main in mains:
-                raw_data = dispatch.get_raw_binary(main, proxy_configs)
-                h.put_file_to_hdfs(r, raw_data, main.name, job_dir, hdfs_user)
+                raw_data = dispatch.get_raw_binary(
+                    main, proxy_configs=proxy_configs, remote=r)
+                if isinstance(raw_data, dict) and raw_data["type"] == "path":
+                    h.copy_from_local(r, raw_data['path'],
+                                      job_dir, hdfs_user)
+                else:
+                    h.put_file_to_hdfs(r, raw_data, main.name,
+                                       job_dir, hdfs_user)
                 uploaded_paths.append(job_dir + '/' + main.name)
             if len(libs) and job_dir_suffix:
                 # HDFS 2.2.0 fails to put file if the lib dir does not exist
                 self.create_hdfs_dir(r, lib_dir)
             for lib in libs:
-                raw_data = dispatch.get_raw_binary(lib, proxy_configs)
-                h.put_file_to_hdfs(r, raw_data, lib.name, lib_dir, hdfs_user)
+                raw_data = dispatch.get_raw_binary(
+                    lib, proxy_configs=proxy_configs, remote=remote)
+                if isinstance(raw_data, dict) and raw_data["type"] == "path":
+                    h.copy_from_local(r, raw_data['path'],
+                                      lib_dir, hdfs_user)
+                else:
+                    h.put_file_to_hdfs(r, raw_data, lib.name,
+                                       lib_dir, hdfs_user)
                 uploaded_paths.append(lib_dir + '/' + lib.name)
             for lib in builtin_libs:
                 h.put_file_to_hdfs(r, lib['raw'], lib['name'], lib_dir,

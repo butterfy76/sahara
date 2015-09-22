@@ -1,7 +1,7 @@
 clusters:
   - plugin_name: vanilla
-    plugin_version: 2.6.0
-    image: ${vanilla_two_six_image}
+    plugin_version: 2.7.1
+    image: ${vanilla_two_seven_one_image}
     node_group_templates:
       - name: worker
         flavor: ${ci_flavor_id}
@@ -28,6 +28,7 @@ clusters:
           - resourcemanager
           - namenode
         auto_security_group: true
+        is_proxy_gateway: true
     cluster_template:
       name: transient
       node_group_templates:

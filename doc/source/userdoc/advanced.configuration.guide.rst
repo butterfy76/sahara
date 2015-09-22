@@ -74,8 +74,8 @@ nodes and racks in the following format:
 .. sourcecode:: cfg
 
     compute1 /rack1
-    compute1 /rack2
-    compute1 /rack2
+    compute2 /rack2
+    compute3 /rack2
 
 Note that the Compute node names must be exactly the same as configured in
 OpenStack (``host`` column in admin list for instances).
@@ -432,6 +432,12 @@ set to ``True`` and some extra configurations are needed:
 It should be noted that in a situation when the host has no space for volume
 creation, the created volume will have an ``Error`` state and can not be used.
 
+Autoconfiguration for templates
+-------------------------------
+
+:doc:`../userdoc/configs_recommendations`
+
+
 NTP service configuration
 -------------------------
 
@@ -445,3 +451,35 @@ template, use the ``URL of NTP server`` setting in the ``General Parameters``
 section when you create the template. If you would like to disable NTP for a
 particular cluster template, deselect the ``Enable NTP service`` checkbox in
 the ``General Parameters`` section when you create the template.
+
+CORS (Cross Origin Resource Sharing) Configuration
+--------------------------------------------------
+
+Sahara provides direct API access to user-agents (browsers) via the HTTP
+CORS protocol. Detailed documentation, as well as troubleshooting examples,
+may be found in the OpenStack `Cloud Admin Guide`_.
+
+To get started quickly, use the example configuration block below, replacing
+the :code:`allowed origin` field with the host(s) from which your API expects
+access.
+
+.. sourcecode:: cfg
+
+    [cors]
+    allowed_origin=https://we.example.com:443
+    max_age=3600
+    allow_credentials=true
+
+    [cors.additional_domain_1]
+    allowed_origin=https://additional_domain_1.example.com:443
+
+    [cors.additional_domain_2]
+    allowed_origin=https://additional_domain_2.example.com:443
+
+..
+
+For more information on Cross Origin Resource Sharing, please review the `W3C
+CORS specification`_.
+
+.. _Cloud Admin Guide: http://docs.openstack.org/admin-guide-cloud/cross_project_cors.html
+.. _W3C CORS specification: www.w3.org/TR/cors/
