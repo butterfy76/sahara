@@ -294,8 +294,7 @@ SCHEMA = {
                         }
                     },
                     "edp_jobs_flow": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": ["string", "array"]
                     },
                     "retain_resources": {
                         "type": "boolean"
@@ -328,6 +327,9 @@ SCHEMA = {
                                         "enum": ["swift", "hdfs", "maprfs"]
                                     },
                                     "source": {
+                                        "type": "string"
+                                    },
+                                    "hdfs_username": {
                                         "type": "string"
                                     }
                                 },
