@@ -34,25 +34,13 @@ function create_sahara_accounts {
 
     if [[ "$KEYSTONE_CATALOG_BACKEND" = 'sql' ]]; then
 
-        # TODO: remove "data_processing" service when #1356053 will be fixed
-        local sahara_service_old=$(openstack service create \
-            "data_processing" \
-            --name "sahara" \
-            --description "Sahara Data Processing" \
-            -f value -c id
-        )
-        local sahara_service_new=$(openstack service create \
+        local sahara_service=$(openstack service create \
             "data-processing" \
             --name "sahara" \
             --description "Sahara Data Processing" \
             -f value -c id
         )
-        get_or_create_endpoint $sahara_service_old \
-            "$REGION_NAME" \
-            "$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s" \
-            "$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s" \
-            "$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s"
-        get_or_create_endpoint $sahara_service_new \
+        get_or_create_endpoint $sahara_service \
             "$REGION_NAME" \
             "$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s" \
             "$SAHARA_SERVICE_PROTOCOL://$SAHARA_SERVICE_HOST:$SAHARA_SERVICE_PORT/v1.1/\$(tenant_id)s" \
@@ -75,6 +63,8 @@ function configure_sahara {
     if [[ -f $SAHARA_DIR/etc/sahara/policy.json ]]; then
         cp -p $SAHARA_DIR/etc/sahara/policy.json $SAHARA_CONF_DIR
     fi
+
+    cp -p $SAHARA_DIR/etc/sahara/api-paste.ini $SAHARA_CONF_DIR
 
     # Create auth cache dir
     sudo install -d -o $STACK_USER -m 700 $SAHARA_AUTH_CACHE_DIR
@@ -209,7 +199,7 @@ function stop_sahara {
 }
 
 # Dispatcher for Sahara plugin
-if is_service_enabled sahara; then
+if is_service_enabled sahara || is_service_enabled sahara-api || is_service_enabled sahara-eng; then
     if [[ "$1" == "stack" && "$2" == "install" ]]; then
         echo_summary "Installing sahara"
         install_sahara
