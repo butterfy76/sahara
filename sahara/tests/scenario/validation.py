@@ -231,7 +231,11 @@ SCHEMA = {
                                 }
                             },
                             "anti_affinity": {
-                                "type": "boolean"
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
                             }
                         },
                         "required": ["name", "node_group_templates"],
@@ -306,6 +310,10 @@ SCHEMA = {
                     },
                     "retain_resources": {
                         "type": "boolean"
+                    },
+                    "edp_batching": {
+                        "type": "integer",
+                        "minimum": 1
                     }
                 },
                 "required": ["plugin_name", "plugin_version", "image"],
