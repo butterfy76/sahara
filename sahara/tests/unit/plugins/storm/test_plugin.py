@@ -19,6 +19,7 @@ from sahara import conductor as cond
 from sahara import context
 from sahara.plugins import base as pb
 from sahara.plugins import exceptions as ex
+from sahara.plugins.storm import plugin as pl
 from sahara.tests.unit import base
 
 
@@ -65,9 +66,8 @@ class StormPluginTest(base.SaharaWithDbTestCase):
         plugin = pb.PLUGINS.get_plugin(cluster.plugin_name)
         supervisor_id = [node.id for node in cluster.node_groups
                          if node.name == 'supervisor']
-        self.assertEqual(None,
-                         plugin._validate_existing_ng_scaling(cluster,
-                                                              supervisor_id))
+        self.assertIsNone(plugin._validate_existing_ng_scaling(cluster,
+                                                               supervisor_id))
 
     def test_validate_additional_ng_scaling(self):
         data = {'name': "cluster",
@@ -96,9 +96,9 @@ class StormPluginTest(base.SaharaWithDbTestCase):
         plugin = pb.PLUGINS.get_plugin(cluster.plugin_name)
         supervisor_id = [node.id for node in cluster.node_groups
                          if node.name == 'supervisor']
-        self.assertEqual(None,
-                         plugin._validate_additional_ng_scaling(cluster,
-                                                                supervisor_id))
+        self.assertIsNone(plugin._validate_additional_ng_scaling(cluster,
+                                                                 supervisor_id)
+                          )
 
     def test_validate_existing_ng_scaling_raises(self):
         data = {'name': "cluster",
@@ -157,3 +157,13 @@ class StormPluginTest(base.SaharaWithDbTestCase):
         self.assertRaises(ex.NodeGroupCannotBeScaled,
                           plugin._validate_existing_ng_scaling,
                           cluster, master_id)
+
+    def test_get_open_port(self):
+        plugin_storm = pl.StormProvider()
+        cluster = mock.Mock()
+        ng = mock.Mock()
+        ng.node_processes = ['nimbus']
+        cluster.node_groups = [ng]
+        ng.cluster = cluster
+        ports = plugin_storm.get_open_ports(ng)
+        self.assertEqual([8080], ports)

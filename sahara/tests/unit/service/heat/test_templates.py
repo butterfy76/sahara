@@ -32,7 +32,6 @@ class BaseTestClusterTemplate(base.SaharaWithDbTestCase):
     4. Anti-affinity feature with proper nova scheduler hints included
     into Heat templates.
     """
-
     def _make_node_groups(self, floating_ip_pool=None, volume_type=None):
         ng1 = tu.make_ng_dict('master', 42, ['namenode'], 1,
                               floating_ip_pool=floating_ip_pool, image_id=None,
@@ -44,13 +43,13 @@ class BaseTestClusterTemplate(base.SaharaWithDbTestCase):
                               image_username='root', volume_type=volume_type)
         return ng1, ng2
 
-    def _make_cluster(self, mng_network, ng1, ng2, anti_affinity=[]):
+    def _make_cluster(self, mng_network, ng1, ng2, anti_affinity=None):
         return tu.create_cluster("cluster", "tenant1", "general",
                                  "2.6.0", [ng1, ng2],
                                  user_keypair_id='user_key',
                                  neutron_management_network=mng_network,
                                  default_image_id='1', image_id=None,
-                                 anti_affinity=anti_affinity)
+                                 anti_affinity=anti_affinity or [])
 
 
 class TestClusterTemplate(BaseTestClusterTemplate):
@@ -132,8 +131,11 @@ class TestClusterTemplate(BaseTestClusterTemplate):
         expected = {'cluster-master-1': {
             'type': 'OS::Neutron::SecurityGroup',
             'properties': {
-                'description': 'Auto security group created by Sahara '
-                    'for Node Group \'master\' of cluster \'cluster\'.',
+                'description': 'Data Processing Cluster by Sahara\n'
+                               'Sahara cluster name: cluster\n'
+                               'Sahara engine: heat.3.0\n'
+                               'Auto security group for Sahara Node '
+                               'Group: master',
                 'rules': [{
                     'remote_ip_prefix': rule[0],
                     'ethertype': rule[1],
@@ -150,8 +152,11 @@ class TestClusterTemplate(BaseTestClusterTemplate):
         expected = {'cluster-master-1': {
             'type': 'AWS::EC2::SecurityGroup',
             'properties': {
-                'GroupDescription': 'Auto security group created by Sahara'
-                    ' for Node Group \'master\' of cluster \'cluster\'.',
+                'GroupDescription': 'Data Processing Cluster by Sahara\n'
+                                    'Sahara cluster name: cluster\n'
+                                    'Sahara engine: heat.3.0\n'
+                                    'Auto security group for Sahara '
+                                    'Node Group: master',
                 'SecurityGroupIngress': [{
                     'ToPort': '22',
                     'CidrIp': '0.0.0.0/0',
@@ -193,6 +198,7 @@ class TestClusterTemplateWaitCondition(BaseTestClusterTemplate):
                                                  self.ng1, self.ng2)
 
     def test_use_wait_condition(self):
+        self.override_config('heat_enable_wait_condition', True)
         instance = self.template._serialize_instance(self.ng1)
         expected_wc_handle = {
             "type": "OS::Heat::WaitConditionHandle"

@@ -17,6 +17,7 @@
 import os
 import uuid
 
+from castellan import key_manager
 from oslo_config import cfg
 import six
 
@@ -116,10 +117,12 @@ class SparkJobEngine(base_engine.JobEngine):
         proxy_configs = job_configs.get('proxy_configs')
         configs = {}
         if proxy_configs:
+            key = key_manager.API().get(
+                context.current(), proxy_configs.get('proxy_password'))
+            password = key.get_encoded()
             configs[sw.HADOOP_SWIFT_USERNAME] = proxy_configs.get(
                 'proxy_username')
-            configs[sw.HADOOP_SWIFT_PASSWORD] = proxy_configs.get(
-                'proxy_password')
+            configs[sw.HADOOP_SWIFT_PASSWORD] = password
             configs[sw.HADOOP_SWIFT_TRUST_ID] = proxy_configs.get(
                 'proxy_trust_id')
             configs[sw.HADOOP_SWIFT_DOMAIN_NAME] = CONF.proxy_user_domain_name
@@ -175,7 +178,17 @@ class SparkJobEngine(base_engine.JobEngine):
 
         return uploaded_paths, builtin_paths
 
-    def _check_driver_class_path(self, param_dict):
+    def _check_driver_class_path(self, job_configs, param_dict):
+        overridden = edp.spark_driver_classpath(
+            job_configs.get('configs', {}))
+        if overridden:
+            param_dict['driver-class-path'] = (
+                " --driver-class-path " + overridden)
+            return
+        if not param_dict.get('wrapper_jar'):
+            # no need in driver classpath if swift as datasource is not used
+            param_dict['driver-class-path'] = ""
+            return
         cp = param_dict['driver-class-path'] or ""
         if param_dict['deploy-mode'] == 'client' and not (
                 cp.startswith(":") or cp.endswith(":")):
@@ -252,7 +265,7 @@ class SparkJobEngine(base_engine.JobEngine):
         # Handle driver classpath. Because of the way the hadoop
         # configuration is handled in the wrapper class, using
         # wrapper_xml, the working directory must be on the classpath
-        self._check_driver_class_path(mutual_dict)
+        self._check_driver_class_path(updated_job_configs, mutual_dict)
 
         if mutual_dict.get("wrapper_jar"):
             # Substrings which may be empty have spaces
@@ -267,7 +280,7 @@ class SparkJobEngine(base_engine.JobEngine):
                 mutual_dict)
         else:
             cmd = (
-                '%(spark-user)s%(spark-submit)s'
+                '%(spark-user)s%(spark-submit)s%(driver-class-path)s'
                 ' --class %(job_class)s%(addnl_jars)s'
                 ' --master %(master)s'
                 ' --deploy-mode %(deploy-mode)s'

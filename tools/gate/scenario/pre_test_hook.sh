@@ -23,12 +23,12 @@ source commons $@
 
 echo "IMAGE_URLS=$SAHARA_FAKE_PLUGIN_IMAGE" >> $LOCALRC_PATH
 
-if [ "$ENGINE" == "heat" ]; then
-    echo "enable_service heat h-eng h-api h-api-cfn h-api-cw" >> $LOCALRC_PATH
-fi
-echo "SAHARA_INFRA_ENGINE=$ENGINE" >> $LOCALRC_PATH
-
 # Here we can set some configurations for local.conf
 # for example, to pass some config options directly to sahara.conf file
 # echo -e '[[post-config|$SAHARA_CONF]]\n[DEFAULT]\n' >> $LOCALCONF_PATH
 # echo -e 'infrastructure_engine=true\n' >> $LOCALCONF_PATH
+
+if [ "$NETWORK" == "nova-network" ]; then
+    echo -e '[[post-config|$SAHARA_CONF_FILE]]\n[DEFAULT]\n' >> $LOCALCONF_PATH
+    echo -e 'heat_enable_wait_condition=false\n' >> $LOCALCONF_PATH
+fi

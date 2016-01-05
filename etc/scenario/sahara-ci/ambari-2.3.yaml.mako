@@ -8,11 +8,13 @@ clusters:
         node_processes:
           - Ambari
           - MapReduce History Server
+          - Spark History Server
           - NameNode
           - ResourceManager
           - SecondaryNameNode
           - YARN Timeline Server
           - ZooKeeper
+          - Kafka Broker
         auto_security_group: true
       - name: master-edp
         flavor: ${ci_flavor_id}
@@ -38,12 +40,26 @@ clusters:
       cluster_configs:
         HDFS:
           dfs.datanode.du.reserved: 0
+    custom_checks:
+      check_kafka:
+        zookeeper_process: ZooKeeper
+        kafka_process: Kafka Broker
+        spark_flow:
+          - type: Spark
+            main_lib:
+              type: database
+              source: etc/edp-examples/edp-spark/spark-kafka-example.jar
+            args:
+              - '{zookeeper_list}'
+              - '{topic}'
+              - '{timeout}'
+            timeout: 30
     cluster:
       name: ${cluster_name}
     scenario:
       - run_jobs
+      - kafka
+
     edp_jobs_flow:
-      - pig_job
-      - mapreduce_job
-      - mapreduce_streaming_job
       - java_job
+      - spark_pi

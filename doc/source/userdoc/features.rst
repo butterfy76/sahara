@@ -189,9 +189,12 @@ The following table provides a plugin capability matrix:
 Security group management
 -------------------------
 
-.. TODO (mimccune)
-    This section could use an example to show how security groups are
-    used.
+Security groups are sets of IP filter rules that are applied to an instance's
+networking. They are project specified, and project members can edit the
+default rules for their group and add new rules sets. All projects have a
+"default" security group, which is applied to instances that have no other
+security group defined. Unless changed, this security group denies all incoming
+traffic.
 
 Sahara allows you to control which security groups will be used for created
 instances. This can be done by providing the ``security_groups`` parameter for
@@ -230,3 +233,20 @@ Public objects created in one tenant can be used from other tenants (for
 example, a cluster can be created from a public cluster template which is
 created in another tenant), but modification operations are possible only from
 the tenant in which object was created.
+
+Data source placeholders support
+--------------------------------
+
+Sahara supports special strings that can be used in data source URLs. These
+strings will be replaced with appropriate values during job execution which
+allows the use of the same data source as an output multiple times.
+
+There are 2 types of string currently supported:
+
+* ``%JOB_EXEC_ID%`` - this string will be replaced with the job execution ID.
+* ``%RANDSTR(len)%`` - this string will be replaced with random string of
+  lowercase letters of length ``len``.
+
+After placeholders are replaced, the real URLs are stored in the
+``data_source_urls`` field of the job execution object. This is used later to
+find objects created by a particular job run.

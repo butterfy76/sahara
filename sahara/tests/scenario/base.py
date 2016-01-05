@@ -36,7 +36,6 @@ from sahara.tests.scenario import timeouts
 from sahara.tests.scenario import utils
 from sahara.utils import crypto as ssh
 
-
 logger = logging.getLogger('swiftclient')
 logger.setLevel(logging.CRITICAL)
 
@@ -44,6 +43,8 @@ DEFAULT_TEMPLATES_PATH = (
     'sahara/tests/scenario/templates/%(plugin_name)s/%(hadoop_version)s')
 CHECK_OK_STATUS = "OK"
 CHECK_FAILED_STATUS = "FAILED"
+CLUSTER_STATUS_ACTIVE = "Active"
+CLUSTER_STATUS_ERROR = "Error"
 
 
 def track_result(check_name, exit_with_error=True):
@@ -176,6 +177,15 @@ class BaseTestCase(base.BaseTestCase):
         configs['args'] = args
         return configs
 
+    def _prepare_job_running(self, job):
+        input_id, output_id = self._create_datasources(job)
+        main_libs, additional_libs = self._create_job_binaries(job)
+        job_id = self._create_job(job['type'], main_libs, additional_libs)
+        configs = self._parse_job_configs(job)
+        configs = self._put_io_data_to_configs(
+            configs, input_id, output_id)
+        return [job_id, input_id, output_id, configs]
+
     @track_result("Check EDP jobs", False)
     def check_run_jobs(self):
         batching = self.testcase.get('edp_batching',
@@ -185,13 +195,7 @@ class BaseTestCase(base.BaseTestCase):
 
         pre_exec = []
         for job in jobs:
-            input_id, output_id = self._create_datasources(job)
-            main_libs, additional_libs = self._create_job_binaries(job)
-            job_id = self._create_job(job['type'], main_libs, additional_libs)
-            configs = self._parse_job_configs(job)
-            configs = self._put_io_data_to_configs(
-                configs, input_id, output_id)
-            pre_exec.append([job_id, input_id, output_id, configs])
+            pre_exec.append(self._prepare_job_running(job))
             batching -= 1
             if not batching:
                 self._job_batching(pre_exec)
@@ -317,7 +321,8 @@ class BaseTestCase(base.BaseTestCase):
         path = utils.rand_name('test')
         data = None
         if source:
-            data = open(source).read()
+            with open(source) as source_fd:
+                data = source_fd.read()
 
         self.__upload_to_container(container, path, data)
 
@@ -338,7 +343,8 @@ class BaseTestCase(base.BaseTestCase):
             "sudo su - -c \"hdfs dfs -mkdir -p %(path)s \" %(user)s" % {
                 "path": hdfs_dir, "user": hdfs_username})
         hdfs_filepath = utils.rand_name(hdfs_dir + "/file")
-        data = open(source).read()
+        with open(source) as source_fd:
+            data = source_fd.read()
         self._run_command_on_node(
             inst_ip,
             ("echo -e \"%(data)s\" | sudo su - -c \"hdfs dfs"
@@ -349,7 +355,8 @@ class BaseTestCase(base.BaseTestCase):
         return hdfs_filepath
 
     def _create_internal_db_data(self, source):
-        data = open(source).read()
+        with open(source) as source_fd:
+            data = source_fd.read()
         id = self.__create_internal_db_data(utils.rand_name('test'), data)
         return 'internal-db://%s' % id
 
@@ -587,9 +594,9 @@ class BaseTestCase(base.BaseTestCase):
                 gentle=True):
             while True:
                 status = self.sahara.get_cluster_status(cluster_id)
-                if status == 'Active':
+                if status == CLUSTER_STATUS_ACTIVE:
                     break
-                if status == 'Error':
+                if status == CLUSTER_STATUS_ERROR:
                     raise exc.TempestException("Cluster in %s state" % status)
                 time.sleep(3)
 

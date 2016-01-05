@@ -22,6 +22,7 @@ import testtools
 from sahara import conductor as cond
 from sahara import exceptions as ex
 from sahara.plugins import base as pb
+from sahara.service.castellan import config as castellan
 from sahara.service.edp import job_manager
 from sahara.service.edp import job_utils
 from sahara.service.edp.oozie.workflow_creator import workflow_factory
@@ -29,6 +30,7 @@ from sahara.swift import swift_helper as sw
 from sahara.swift import utils as su
 from sahara.tests.unit import base
 from sahara.tests.unit.service.edp import edp_test_utils as u
+from sahara.utils import cluster as c_u
 from sahara.utils import edp
 from sahara.utils import patches as p
 from sahara.utils import xmlutils
@@ -44,6 +46,7 @@ class TestJobManager(base.SaharaWithDbTestCase):
         super(TestJobManager, self).setUp()
         p.patch_minidom_writexml()
         pb.setup_plugins()
+        castellan.validate_config()
 
     @mock.patch('uuid.uuid4')
     @mock.patch('sahara.utils.remote.get_remote')
@@ -553,7 +556,7 @@ class TestJobManager(base.SaharaWithDbTestCase):
         job_get.return_value = job
 
         cluster = u.create_cluster()
-        cluster.status = "Active"
+        cluster.status = c_u.CLUSTER_STATUS_ACTIVE
         cluster_get.return_value = cluster
         with testtools.ExpectedException(ex.EDPError):
             job_manager._run_job(job_exec.id)
@@ -612,7 +615,7 @@ class TestJobManager(base.SaharaWithDbTestCase):
         job_get.return_value = job
 
         cluster = u.create_cluster()
-        cluster.status = "Active"
+        cluster.status = c_u.CLUSTER_STATUS_ACTIVE
         cluster_get.return_value = cluster
 
         time_get.return_value = 10000

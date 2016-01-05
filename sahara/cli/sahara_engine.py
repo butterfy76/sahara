@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (c) 2013 Mirantis Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,4 +49,6 @@ def main():
     server.setup_sahara_engine()
 
     ops_server = ops.OpsServer()
-    ops_server.start()
+    launcher = server.get_process_launcher()
+    launcher.launch_service(ops_server.get_service())
+    launcher.wait()

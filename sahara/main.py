@@ -17,7 +17,8 @@ import os
 
 from oslo_config import cfg
 from oslo_log import log
-from oslo_service import systemd
+from oslo_service import service as oslo_service
+from oslo_service import sslutils
 from oslo_service import wsgi as oslo_wsgi
 import stevedore
 
@@ -27,13 +28,13 @@ from sahara.i18n import _LI
 from sahara.i18n import _LW
 from sahara.plugins import base as plugins_base
 from sahara.service import api as service_api
+from sahara.service.castellan import config as castellan
 from sahara.service.edp import api as edp_api
 from sahara.service import ops as service_ops
 from sahara.service import periodic
 from sahara.utils.openstack import cinder
 from sahara.utils import remote
 from sahara.utils import rpc as messaging
-from sahara.utils import wsgi
 
 LOG = log.getLogger(__name__)
 
@@ -41,21 +42,31 @@ LOG = log.getLogger(__name__)
 opts = [
     cfg.StrOpt('os_region_name',
                help='Region name used to get services endpoints.'),
-    cfg.StrOpt('infrastructure_engine',
-               default='heat',
-               help='An engine which will be used to provision '
-                    'infrastructure for Hadoop cluster.'),
     cfg.StrOpt('remote',
                default='ssh',
                help='A method for Sahara to execute commands '
                     'on VMs.'),
-    cfg.IntOpt('api_workers', default=0,
+    cfg.IntOpt('api_workers', default=1,
                help="Number of workers for Sahara API service (0 means "
-                    "all-in-one-thread configuration).")
+                    "all-in-one-thread configuration)."),
+    # TODO(vgridnev): Remove in N release
+    cfg.StrOpt('infrastructure_engine',
+               default='heat',
+               help='An engine which will be used to provision '
+                    'infrastructure for Hadoop cluster.',
+               deprecated_for_removal=True),
 ]
 
+INFRASTRUCTURE_ENGINE = 'heat'
 CONF = cfg.CONF
 CONF.register_opts(opts)
+
+
+class SaharaWSGIService(oslo_wsgi.Server):
+    def __init__(self, service_name, app):
+        super(SaharaWSGIService, self).__init__(
+            CONF, service_name, app, host=CONF.host, port=CONF.port,
+            use_ssl=sslutils.is_enabled(CONF))
 
 
 def setup_common(possible_topdir, service_name):
@@ -72,6 +83,7 @@ def setup_common(possible_topdir, service_name):
 
     # Validate other configurations (that may produce logs) here
     cinder.validate_config()
+    castellan.validate_config()
 
     if service_name != 'all-in-one' or cfg.CONF.enable_notifications:
         messaging.setup()
@@ -120,17 +132,13 @@ def _load_driver(namespace, name):
 
 def _get_infrastructure_engine():
     """Import and return one of sahara.service.*_engine.py modules."""
-
+    if CONF.infrastructure_engine != "heat":
+        LOG.warning(_LW("Engine {engine} is not supported. Loading Heat "
+                        "infrastructure engine instead.").format(
+            engine=CONF.infrastructure_engine))
     LOG.debug("Infrastructure engine {engine} is loading".format(
-        engine=CONF.infrastructure_engine))
-
-    if CONF.infrastructure_engine == "direct":
-        LOG.warning(_LW("Direct infrastructure engine is deprecated in Liberty"
-                        " release and will be removed after that release."
-                        " Use Heat infrastructure engine instead."))
-
-    return _load_driver('sahara.infrastructure.engine',
-                        CONF.infrastructure_engine)
+        engine=INFRASTRUCTURE_ENGINE))
+    return _load_driver('sahara.infrastructure.engine', INFRASTRUCTURE_ENGINE)
 
 
 def _get_remote_driver():
@@ -145,8 +153,11 @@ def _get_ops_driver(driver_name):
     return _load_driver('sahara.run.mode', driver_name)
 
 
-def start_server(app):
-    server = wsgi.Server()
-    server.start(app)
-    systemd.notify_once()
-    server.wait()
+def get_process_launcher():
+    return oslo_service.ProcessLauncher(CONF)
+
+
+def launch_api_service(launcher, service):
+    launcher.launch_service(service, workers=CONF.api_workers)
+    service.start()
+    launcher.wait()
