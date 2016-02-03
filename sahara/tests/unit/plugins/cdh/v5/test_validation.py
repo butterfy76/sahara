@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Mirantis Inc.
+# Copyright (c) 2015 Intel Corpration
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sahara.plugins.cdh.v5 import plugin_utils as pu
-from sahara.plugins.cdh import validation
+from sahara.plugins.cdh.v5 import validation
+from sahara.tests.unit.plugins.cdh import base_validation_tests as bvt
 
 
-class ValidatorV5(validation.Validator):
-    PU = pu.PluginUtilsV5()
+class ValidationTestCase(bvt.BaseValidationTestCase):
+    def setUp(self):
+        super(ValidationTestCase, self).setUp()
+        self.module = validation.ValidatorV5
