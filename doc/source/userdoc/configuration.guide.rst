@@ -175,11 +175,11 @@ Orchestration configuration
 ---------------------------
 
 By default sahara is configured to use the heat engine for instance
-creation. The heat engine uses the Openstack Orchestration service to
+creation. The heat engine uses the OpenStack Orchestration service to
 provision instances. Sahara can be configured to use the direct engine for
 this purpose, but after the Liberty release it will be removed. This
 engine makes calls directly to the services required for instance
-provisioning. We recommend using the Openstack Orchestration service.
+provisioning. We recommend using the OpenStack Orchestration service.
 
 To configure sahara to use the direct engine for instance
 provisioning the ``infrastructure_engine`` parameter should be modified in
@@ -203,7 +203,8 @@ Sahara’s public API calls may be restricted to certain sets of users by
 using a policy configuration file. The location of the policy file(s)
 is controlled by the ``policy_file`` and ``policy_dirs`` parameters
 in the ``[oslo_policy]`` section. By default sahara will search for
-a ``policy.json`` file in the same directory as the configuration file.
+a ``policy.json`` file in the same directory as the ``sahara.conf``
+configuration file.
 
 Examples
 ++++++++
