@@ -161,12 +161,21 @@ class ConductorManager(db_base.Base):
         """Return the cluster or None if it does not exist."""
         return self.db.cluster_get(context, cluster, show_progress)
 
-    def cluster_get_all(self, context, **kwargs):
+    def cluster_get_all(self, context, regex_search=False, **kwargs):
         """Get all clusters filtered by **kwargs.
 
-        e.g. cluster_get_all(plugin_name='vanilla', hadoop_version='1.1')
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
         """
-        return self.db.cluster_get_all(context, **kwargs)
+        return self.db.cluster_get_all(context, regex_search, **kwargs)
 
     def cluster_create(self, context, values):
         """Create a cluster from the values dictionary."""
@@ -341,13 +350,23 @@ class ConductorManager(db_base.Base):
         """Return the Node Group Template or None if it does not exist."""
         return self.db.node_group_template_get(context, node_group_template)
 
-    def node_group_template_get_all(self, context, **kwargs):
+    def node_group_template_get_all(self,
+                                    context, regex_search=False, **kwargs):
         """Get all NodeGroupTemplates filtered by **kwargs.
 
-        e.g.  node_group_template_get_all(plugin_name='vanilla',
-                                          hadoop_version='1.1')
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
         """
-        return self.db.node_group_template_get_all(context, **kwargs)
+        return self.db.node_group_template_get_all(context,
+                                                   regex_search, **kwargs)
 
     def node_group_template_create(self, context, values):
         """Create a Node Group Template from the values dictionary."""
@@ -379,12 +398,21 @@ class ConductorManager(db_base.Base):
         """Return the Data Source or None if it does not exist."""
         return self.db.data_source_get(context, data_source)
 
-    def data_source_get_all(self, context, **kwargs):
+    def data_source_get_all(self, context, regex_search=False, **kwargs):
         """Get all Data Sources filtered by **kwargs.
 
-        e.g.  data_source_get_all(name='myfile', type='swift')
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
         """
-        return self.db.data_source_get_all(context, **kwargs)
+        return self.db.data_source_get_all(context, regex_search, **kwargs)
 
     def data_source_count(self, context, **kwargs):
         """Count Data Sources filtered by **kwargs.
@@ -505,12 +533,21 @@ class ConductorManager(db_base.Base):
         """Return the Job or None if it does not exist."""
         return self.db.job_get(context, job)
 
-    def job_get_all(self, context, **kwargs):
+    def job_get_all(self, context, regex_search=False, **kwargs):
         """Get all Jobs filtered by **kwargs.
 
-        e.g.  job_get_all(name='myjob', type='MapReduce')
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
         """
-        return self.db.job_get_all(context, **kwargs)
+        return self.db.job_get_all(context, regex_search, **kwargs)
 
     def job_create(self, context, values):
         """Create a Job from the values dictionary."""
@@ -529,12 +566,24 @@ class ConductorManager(db_base.Base):
 
     # JobBinary ops
 
-    def job_binary_get_all(self, context, **kwargs):
+    def job_binary_get_all(self, context, regex_search=False, **kwargs):
         """Get all JobBinarys filtered by **kwargs.
+
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
 
         e.g.  job_binary_get_all(name='wordcount.jar')
         """
-        return self.db.job_binary_get_all(context, **kwargs)
+        return self.db.job_binary_get_all(context,
+                                          regex_search, **kwargs)
 
     def job_binary_get(self, context, job_binary_id):
         """Return the JobBinary or None if it does not exist."""
@@ -595,14 +644,25 @@ class ConductorManager(db_base.Base):
 
     # JobBinaryInternal ops
 
-    def job_binary_internal_get_all(self, context, **kwargs):
+    def job_binary_internal_get_all(self, context,
+                                    regex_search=False, **kwargs):
         """Get all JobBinaryInternals filtered by **kwargs.
 
-        e.g.  cluster_get_all(name='wordcount.jar')
-
         The JobBinaryInternals returned do not contain a data field.
+
+        :param context: The context, and associated authentication, to use with
+                        this operation
+
+        :param regex_search: If True, enable regex matching for filter
+                             values. See the user guide for more information
+                             on how regex matching is handled. If False,
+                             no regex matching is done.
+
+        :param kwargs: Specifies values for named fields by which
+                       to constrain the search
         """
-        return self.db.job_binary_internal_get_all(context, **kwargs)
+        return self.db.job_binary_internal_get_all(context,
+                                                   regex_search, **kwargs)
 
     def job_binary_internal_get(self, context, job_binary_internal_id):
         """Return the JobBinaryInternal or None if it does not exist

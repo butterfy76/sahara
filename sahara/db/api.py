@@ -120,12 +120,21 @@ def cluster_get(context, cluster, show_progress=False):
 
 
 @to_dict
-def cluster_get_all(context, **kwargs):
+def cluster_get_all(context, regex_search=False, **kwargs):
     """Get all clusters filtered by **kwargs.
 
-    e.g. cluster_get_all(ctx, plugin_name='vanilla', hadoop_version='1.1')
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                         values. See the user guide for more information
+                         on how regex matching is handled. If False,
+                         no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.cluster_get_all(context, **kwargs)
+    return IMPL.cluster_get_all(context, regex_search, **kwargs)
 
 
 @to_dict
@@ -246,13 +255,21 @@ def node_group_template_get(context, node_group_template):
 
 
 @to_dict
-def node_group_template_get_all(context, **kwargs):
+def node_group_template_get_all(context, regex_search=False, **kwargs):
     """Get all Node Group Templates filtered by **kwargs.
 
-    e.g.  node_group_template_get_all(plugin_name='vanilla',
-                                      hadoop_version='1.1')
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                          values. See the user guide for more information
+                          on how regex matching is handled. If False,
+                          no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.node_group_template_get_all(context, **kwargs)
+    return IMPL.node_group_template_get_all(context, regex_search, **kwargs)
 
 
 @to_dict
@@ -286,12 +303,21 @@ def data_source_get(context, data_source):
 
 
 @to_dict
-def data_source_get_all(context, **kwargs):
+def data_source_get_all(context, regex_search=False, **kwargs):
     """Get all Data Sources filtered by **kwargs.
 
-    e.g.  data_source_get_all(name='myfile', type='swift')
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                         values. See the user guide for more information
+                         on how regex matching is handled. If False,
+                         no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.data_source_get_all(context, **kwargs)
+    return IMPL.data_source_get_all(context, regex_search, **kwargs)
 
 
 def data_source_count(context, **kwargs):
@@ -381,12 +407,21 @@ def job_get(context, job):
 
 
 @to_dict
-def job_get_all(context, **kwargs):
+def job_get_all(context, regex_search=False, **kwargs):
     """Get all Jobs filtered by **kwargs.
 
-    e.g.  job_get_all(name='myjob', type='MapReduce')
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                          values. See the user guide for more information
+                          on how regex matching is handled. If False,
+                          no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.job_get_all(context, **kwargs)
+    return IMPL.job_get_all(context, regex_search, **kwargs)
 
 
 @to_dict
@@ -407,12 +442,21 @@ def job_destroy(context, job):
 
 
 @to_dict
-def job_binary_get_all(context, **kwargs):
+def job_binary_get_all(context, regex_search=False, **kwargs):
     """Get all JobBinarys filtered by **kwargs.
 
-    e.g.  job_binary_get_all(name='wordcount.jar')
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                          values. See the user guide for more information
+                          on how regex matching is handled. If False,
+                          no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.job_binary_get_all(context, **kwargs)
+    return IMPL.job_binary_get_all(context, regex_search, **kwargs)
 
 
 @to_dict
@@ -439,14 +483,23 @@ def job_binary_update(context, values):
 
 
 @to_dict
-def job_binary_internal_get_all(context, **kwargs):
+def job_binary_internal_get_all(context, regex_search=False, **kwargs):
     """Get all JobBinaryInternals filtered by **kwargs.
 
-    e.g.  job_binary_internal_get_all(ctx, name='wordcount.jar')
-
     The JobBinaryInternals returned do not contain a data field.
+
+    :param context: The context, and associated authentication, to use with
+                    this operation
+
+    :param regex_search: If True, enable regex matching for filter
+                          values. See the user guide for more information
+                          on how regex matching is handled. If False,
+                          no regex matching is done.
+
+    :param kwargs: Specifies values for named fields by which
+                   to constrain the search
     """
-    return IMPL.job_binary_internal_get_all(context, **kwargs)
+    return IMPL.job_binary_internal_get_all(context, regex_search, **kwargs)
 
 
 @to_dict

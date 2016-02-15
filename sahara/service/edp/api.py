@@ -177,7 +177,8 @@ def delete_job_execution(id):
 
 
 def get_data_sources(**kwargs):
-    return conductor.data_source_get_all(context.ctx(), **kwargs)
+    return conductor.data_source_get_all(context.ctx(),
+                                         regex_search=True, **kwargs)
 
 
 def get_data_source(id):
@@ -197,7 +198,7 @@ def data_source_update(id, values):
 
 
 def get_jobs(**kwargs):
-    return conductor.job_get_all(context.ctx(), **kwargs)
+    return conductor.job_get_all(context.ctx(), regex_search=True, **kwargs)
 
 
 def get_job(id):
@@ -221,7 +222,8 @@ def create_job_binary(values):
 
 
 def get_job_binaries(**kwargs):
-    return conductor.job_binary_get_all(context.ctx(), **kwargs)
+    return conductor.job_binary_get_all(context.ctx(),
+                                        regex_search=True, **kwargs)
 
 
 def get_job_binary(id):
@@ -241,7 +243,8 @@ def create_job_binary_internal(values):
 
 
 def get_job_binary_internals(**kwargs):
-    return conductor.job_binary_internal_get_all(context.ctx(), **kwargs)
+    return conductor.job_binary_internal_get_all(context.ctx(),
+                                                 regex_search=True, **kwargs)
 
 
 def get_job_binary_internal(id):

@@ -252,8 +252,14 @@ def cluster_get(context, cluster_id):
     return _cluster_get(context, get_session(), cluster_id)
 
 
-def cluster_get_all(context, **kwargs):
+def cluster_get_all(context, regex_search=False, **kwargs):
+
+    regex_cols = ['name', 'description', 'plugin_name']
+
     query = model_query(m.Cluster, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.Cluster, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 
@@ -568,8 +574,14 @@ def node_group_template_get(context, node_group_template_id):
                                     node_group_template_id)
 
 
-def node_group_template_get_all(context, **kwargs):
+def node_group_template_get_all(context, regex_search=False, **kwargs):
+
+    regex_cols = ['name', 'description', 'plugin_name']
+
     query = model_query(m.NodeGroupTemplate, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.NodeGroupTemplate, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 
@@ -631,6 +643,34 @@ def node_group_template_update(context, values, ignore_prot_on_def=False):
                     )
 
             ngt.update(values)
+
+            # Here we update any cluster templates that reference the
+            # updated node group template
+            for template_relationship in ngt.templates_relations:
+                ct_id = template_relationship.cluster_template_id
+                ct = cluster_template_get(
+                    context, template_relationship.cluster_template_id)
+                node_groups = ct.node_groups
+                ct_node_groups = []
+                for ng in node_groups:
+                    # Need to fill in all node groups, not just
+                    # the modified group
+                    ng_to_add = ng
+                    if ng.node_group_template_id == ngt_id:
+                        # use the updated node group template
+                        ng_to_add = ngt
+                    ng_to_add = ng_to_add.to_dict()
+                    ng_to_add.update(
+                        {"count": ng["count"],
+                         "node_group_template_id": ng.node_group_template_id})
+                    ng_to_add.pop("updated_at", None)
+                    ng_to_add.pop("created_at", None)
+                    ng_to_add.pop("id", None)
+                    ct_node_groups.append(ng_to_add)
+                ct_update = {"id": ct_id,
+                             "node_groups": ct_node_groups}
+                cluster_template_update(context, ct_update)
+
     except db_exc.DBDuplicateEntry as e:
         raise ex.DBDuplicateEntry(
             _("Duplicate entry for NodeGroupTemplate: %s") % e.columns)
@@ -672,8 +712,14 @@ def data_source_count(context, **kwargs):
     return query.filter_by(**kwargs).count()
 
 
-def data_source_get_all(context, **kwargs):
+def data_source_get_all(context, regex_search=False, **kwargs):
+
+    regex_cols = ['name', 'description', 'url']
+
     query = model_query(m.DataSource, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.DataSource, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 
@@ -907,8 +953,14 @@ def job_get(context, job_id):
     return _job_get(context, get_session(), job_id)
 
 
-def job_get_all(context, **kwargs):
+def job_get_all(context, regex_search=False, **kwargs):
+
+    regex_cols = ['name', 'description']
+
     query = model_query(m.Job, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.Job, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 
@@ -1007,12 +1059,13 @@ def _job_binary_get(context, session, job_binary_id):
     return query.filter_by(id=job_binary_id).first()
 
 
-def job_binary_get_all(context, **kwargs):
-    """Returns JobBinary objects that do not contain a data field
+def job_binary_get_all(context, regex_search=False, **kwargs):
 
-    The data column uses deferred loading.
-    """
+    regex_cols = ['name', 'description', 'url']
     query = model_query(m.JobBinary, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.JobBinary, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 
@@ -1121,12 +1174,18 @@ def _job_binary_internal_get(context, session, job_binary_internal_id):
     return query.filter_by(id=job_binary_internal_id).first()
 
 
-def job_binary_internal_get_all(context, **kwargs):
+def job_binary_internal_get_all(context, regex_search=False, **kwargs):
     """Returns JobBinaryInternal objects that do not contain a data field
 
     The data column uses deferred loading.
     """
+
+    regex_cols = ['name']
+
     query = model_query(m.JobBinaryInternal, context)
+    if regex_search:
+        query, kwargs = regex_filter(query,
+                                     m.JobBinaryInternal, regex_cols, kwargs)
     return query.filter_by(**kwargs).all()
 
 

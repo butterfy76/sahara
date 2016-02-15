@@ -16,10 +16,12 @@
 import copy
 import datetime
 
+import mock
 from sqlalchemy import exc as sa_exc
 import testtools
 
 from sahara import context
+from sahara.db.sqlalchemy import models as m
 from sahara import exceptions as ex
 from sahara.service.castellan import config as castellan
 import sahara.tests.unit.conductor.base as test_base
@@ -186,10 +188,36 @@ class DataSourceTest(test_base.ConductorManagerTestCase):
         lst = self.api.data_source_get_all(ctx, **kwargs)
         self.assertEqual(0, len(lst))
 
+        # Valid field with substrings
+        kwargs = {'name': 'ngt',
+                  'tenant_id': SAMPLE_DATA_SOURCE['tenant_id']}
+        lst = self.api.data_source_get_all(ctx, **kwargs)
+        self.assertEqual(0, len(lst))
+
         # Invalid field
         self.assertRaises(sa_exc.InvalidRequestError,
                           self.api.data_source_get_all,
                           ctx, **{'badfield': 'somevalue'})
+
+    @mock.patch('sahara.db.sqlalchemy.api.regex_filter')
+    def test_data_source_search_regex(self, regex_filter):
+
+        # do this so we can return the correct value
+        def _regex_filter(query, cls, regex_cols, search_opts):
+            return query, search_opts
+
+        regex_filter.side_effect = _regex_filter
+
+        ctx = context.ctx()
+        self.api.data_source_get_all(ctx)
+        self.assertEqual(0, regex_filter.call_count)
+
+        self.api.data_source_get_all(ctx, regex_search=True, name="fox")
+        self.assertEqual(1, regex_filter.call_count)
+        args, kwargs = regex_filter.call_args
+        self.assertTrue(type(args[1] is m.DataSource))
+        self.assertEqual(args[2], ["name", "description", "url"])
+        self.assertEqual(args[3], {"name": "fox"})
 
     def test_data_source_count_in(self):
         ctx = context.ctx()
@@ -585,25 +613,54 @@ class JobTest(test_base.ConductorManagerTestCase):
 
     def test_job_search(self):
         ctx = context.ctx()
-        ctx.tenant_id = SAMPLE_JOB['tenant_id']
-        self.api.job_create(ctx, SAMPLE_JOB)
+        job = copy.copy(SAMPLE_JOB)
+        job["name"] = "frederica"
+        job["description"] = "thebestjob"
+        ctx.tenant_id = job['tenant_id']
+        self.api.job_create(ctx, job)
 
         lst = self.api.job_get_all(ctx)
         self.assertEqual(1, len(lst))
 
-        kwargs = {'name': SAMPLE_JOB['name'],
-                  'tenant_id': SAMPLE_JOB['tenant_id']}
+        kwargs = {'name': job['name'],
+                  'tenant_id': job['tenant_id']}
         lst = self.api.job_get_all(ctx, **kwargs)
         self.assertEqual(1, len(lst))
 
         # Valid field but no matching value
-        lst = self.api.job_get_all(ctx, **{'name': SAMPLE_JOB['name']+"foo"})
+        lst = self.api.job_get_all(ctx, **{'name': job['name']+"foo"})
+        self.assertEqual(0, len(lst))
+
+        # Valid field with substrings
+        kwargs = {'name': "red",
+                  'description': "best"}
+        lst = self.api.job_get_all(ctx, **kwargs)
         self.assertEqual(0, len(lst))
 
         # Invalid field
         self.assertRaises(sa_exc.InvalidRequestError,
                           self.api.job_get_all,
                           ctx, **{'badfield': 'somevalue'})
+
+    @mock.patch('sahara.db.sqlalchemy.api.regex_filter')
+    def test_job_search_regex(self, regex_filter):
+
+        # do this so we can return the correct value
+        def _regex_filter(query, cls, regex_cols, search_opts):
+            return query, search_opts
+
+        regex_filter.side_effect = _regex_filter
+
+        ctx = context.ctx()
+        self.api.job_get_all(ctx)
+        self.assertEqual(0, regex_filter.call_count)
+
+        self.api.job_get_all(ctx, regex_search=True, name="fox")
+        self.assertEqual(1, regex_filter.call_count)
+        args, kwargs = regex_filter.call_args
+        self.assertTrue(type(args[1] is m.Job))
+        self.assertEqual(args[2], ["name", "description"])
+        self.assertEqual(args[3], {"name": "fox"})
 
     def test_job_update_delete_when_protected(self):
         ctx = context.ctx()
@@ -724,19 +781,26 @@ class JobBinaryInternalTest(test_base.ConductorManagerTestCase):
 
     def test_job_binary_internal_search(self):
         ctx = context.ctx()
-        ctx.tenant_id = SAMPLE_JOB_BINARY_INTERNAL['tenant_id']
-        self.api.job_binary_internal_create(ctx, SAMPLE_JOB_BINARY_INTERNAL)
+        jbi = copy.copy(SAMPLE_JOB_BINARY_INTERNAL)
+        jbi["name"] = "frederica"
+        ctx.tenant_id = jbi['tenant_id']
+        self.api.job_binary_internal_create(ctx, jbi)
 
         lst = self.api.job_binary_internal_get_all(ctx)
         self.assertEqual(1, len(lst))
 
-        kwargs = {'name': SAMPLE_JOB_BINARY_INTERNAL['name'],
-                  'tenant_id': SAMPLE_JOB_BINARY_INTERNAL['tenant_id']}
+        kwargs = {'name': jbi['name'],
+                  'tenant_id': jbi['tenant_id']}
         lst = self.api.job_binary_internal_get_all(ctx, **kwargs)
         self.assertEqual(1, len(lst))
 
         # Valid field but no matching value
-        kwargs = {'name': SAMPLE_JOB_BINARY_INTERNAL['name']+"foo"}
+        kwargs = {'name': jbi['name']+"foo"}
+        lst = self.api.job_binary_internal_get_all(ctx, **kwargs)
+        self.assertEqual(0, len(lst))
+
+        # Valid field with substrings
+        kwargs = {'name': "red"}
         lst = self.api.job_binary_internal_get_all(ctx, **kwargs)
         self.assertEqual(0, len(lst))
 
@@ -744,6 +808,27 @@ class JobBinaryInternalTest(test_base.ConductorManagerTestCase):
         self.assertRaises(sa_exc.InvalidRequestError,
                           self.api.job_binary_internal_get_all,
                           ctx, **{'badfield': 'junk'})
+
+    @mock.patch('sahara.db.sqlalchemy.api.regex_filter')
+    def test_job_binary_internal_search_regex(self, regex_filter):
+
+        # do this so we can return the correct value
+        def _regex_filter(query, cls, regex_cols, search_opts):
+            return query, search_opts
+
+        regex_filter.side_effect = _regex_filter
+
+        ctx = context.ctx()
+        self.api.job_binary_internal_get_all(ctx)
+        self.assertEqual(0, regex_filter.call_count)
+
+        self.api.job_binary_internal_get_all(ctx,
+                                             regex_search=True, name="fox")
+        self.assertEqual(1, regex_filter.call_count)
+        args, kwargs = regex_filter.call_args
+        self.assertTrue(type(args[1] is m.JobBinaryInternal))
+        self.assertEqual(args[2], ["name"])
+        self.assertEqual(args[3], {"name": "fox"})
 
     def test_jbi_update_delete_when_protected(self):
         ctx = context.ctx()
@@ -870,19 +955,28 @@ class JobBinaryTest(test_base.ConductorManagerTestCase):
 
     def test_job_binary_search(self):
         ctx = context.ctx()
-        ctx.tenant_id = SAMPLE_JOB_BINARY['tenant_id']
-        self.api.job_binary_create(ctx, SAMPLE_JOB_BINARY)
+        jb = copy.copy(SAMPLE_JOB_BINARY)
+        jb["name"] = "frederica"
+        jb["url"] = "http://thebestbinary"
+        ctx.tenant_id = jb['tenant_id']
+        self.api.job_binary_create(ctx, jb)
 
         lst = self.api.job_binary_get_all(ctx)
         self.assertEqual(1, len(lst))
 
-        kwargs = {'name': SAMPLE_JOB_BINARY['name'],
-                  'tenant_id': SAMPLE_JOB_BINARY['tenant_id']}
+        kwargs = {'name': jb['name'],
+                  'tenant_id': jb['tenant_id']}
         lst = self.api.job_binary_get_all(ctx, **kwargs)
         self.assertEqual(1, len(lst))
 
         # Valid field but no matching value
-        kwargs = {'name': SAMPLE_JOB_BINARY['name']+"foo"}
+        kwargs = {'name': jb['name']+"foo"}
+        lst = self.api.job_binary_get_all(ctx, **kwargs)
+        self.assertEqual(0, len(lst))
+
+        # Valid field with substrings
+        kwargs = {'name': "red",
+                  'url': "best"}
         lst = self.api.job_binary_get_all(ctx, **kwargs)
         self.assertEqual(0, len(lst))
 
@@ -890,6 +984,26 @@ class JobBinaryTest(test_base.ConductorManagerTestCase):
         self.assertRaises(sa_exc.InvalidRequestError,
                           self.api.job_binary_get_all,
                           ctx, **{'badfield': 'somevalue'})
+
+    @mock.patch('sahara.db.sqlalchemy.api.regex_filter')
+    def test_job_binary_search_regex(self, regex_filter):
+
+        # do this so we can return the correct value
+        def _regex_filter(query, cls, regex_cols, search_opts):
+            return query, search_opts
+
+        regex_filter.side_effect = _regex_filter
+
+        ctx = context.ctx()
+        self.api.job_binary_get_all(ctx)
+        self.assertEqual(0, regex_filter.call_count)
+
+        self.api.job_binary_get_all(ctx, regex_search=True, name="fox")
+        self.assertEqual(1, regex_filter.call_count)
+        args, kwargs = regex_filter.call_args
+        self.assertTrue(type(args[1] is m.JobBinary))
+        self.assertEqual(args[2], ["name", "description", "url"])
+        self.assertEqual(args[3], {"name": "fox"})
 
     def test_job_binary_update(self):
         ctx = context.ctx()
