@@ -26,6 +26,7 @@ from sahara.plugins.mapr.services.management import management as mng
 from sahara.plugins.mapr.services.maprfs import maprfs
 from sahara.plugins.mapr.services.oozie import oozie
 from sahara.plugins.mapr.services.pig import pig
+from sahara.plugins.mapr.services.spark import spark
 from sahara.plugins.mapr.services.sqoop import sqoop2
 from sahara.plugins.mapr.services.swift import swift
 from sahara.plugins.mapr.services.yarn import yarn
@@ -48,9 +49,12 @@ class VersionHandler(bvh.BaseVersionHandler):
         self._services = [
             hive.HiveV013(),
             hive.HiveV10(),
+            hive.HiveV12(),
             impala.ImpalaV141(),
             pig.PigV014(),
+            pig.PigV015(),
             flume.Flume(),
+            spark.SparkOnYarn(),
             sqoop2.Sqoop2(),
             mahout.MahoutV010(),
             oozie.OozieV410(),
@@ -59,6 +63,7 @@ class VersionHandler(bvh.BaseVersionHandler):
             hbase.HBaseV0989(),
             hbase.HBaseV09812(),
             drill.DrillV11(),
+            drill.DrillV14(),
             yarn.YARNv270(),
             maprfs.MapRFS(),
             mng.Management(),
