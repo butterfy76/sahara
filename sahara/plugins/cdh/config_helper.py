@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Mirantis Inc.
+# Copyright (c) 2016 Mirantis Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,227 +13,152 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+from oslo_serialization import jsonutils as json
 
 from sahara.plugins import provisioning as p
 from sahara.utils import files as f
 
-DEFAULT_CDH5_UBUNTU_REPO_LIST_URL = ('http://archive.cloudera.com/cdh5/ubuntu'
-                                     '/precise/amd64/cdh/cloudera.list')
 
-DEFAULT_CDH5_UBUNTU_REPO_KEY_URL = ('http://archive.cloudera.com/cdh5/ubuntu'
-                                    '/precise/amd64/cdh/archive.key')
+class ConfigHelper(object):
+    path_to_config = ''
 
-DEFAULT_CM5_UBUNTU_REPO_LIST_URL = ('http://archive.cloudera.com/cm5/ubuntu'
-                                    '/precise/amd64/cm/cloudera.list')
+    CDH5_REPO_URL = p.Config(
+        'CDH5 repo list URL', 'general', 'cluster', priority=1,
+        default_value="")
 
-DEFAULT_CM5_UBUNTU_REPO_KEY_URL = ('http://archive.cloudera.com/cm5/ubuntu'
-                                   '/precise/amd64/cm/archive.key')
+    CDH5_REPO_KEY_URL = p.Config(
+        'CDH5 repo key URL (for debian-based only)', 'general', 'cluster',
+        priority=1, default_value="")
 
-DEFAULT_CDH5_CENTOS_REPO_LIST_URL = ('http://archive.cloudera.com/cdh5/redhat'
-                                     '/6/x86_64/cdh/cloudera-cdh5.repo')
+    CM5_REPO_URL = p.Config(
+        'CM5 repo list URL', 'general', 'cluster', priority=1,
+        default_value="")
 
-DEFAULT_CM5_CENTOS_REPO_LIST_URL = ('http://archive.cloudera.com/cm5/redhat'
-                                    '/6/x86_64/cm/cloudera-manager.repo')
+    CM5_REPO_KEY_URL = p.Config(
+        'CM5 repo key URL (for debian-based only)', 'general', 'cluster',
+        priority=1, default_value="")
 
-DEFAULT_SWIFT_LIB_URL = ('https://repository.cloudera.com/artifactory/repo/org'
-                         '/apache/hadoop/hadoop-openstack/2.3.0-cdh5.1.0'
-                         '/hadoop-openstack-2.3.0-cdh5.1.0.jar')
-DEFAULT_EXTJS_LIB_URL = 'http://extjs.com/deploy/ext-2.2.zip'
+    ENABLE_SWIFT = p.Config('Enable Swift', 'general', 'cluster',
+                            config_type='bool', priority=1,
+                            default_value=True)
 
-CDH5_REPO_URL = p.Config(
-    'CDH5 repo list URL', 'general', 'cluster', priority=1,
-    default_value="")
+    ENABLE_HBASE_COMMON_LIB = p.Config(
+        'Enable HBase Common Lib', 'general', 'cluster', config_type='bool',
+        priority=1, default_value=True)
 
-CDH5_REPO_KEY_URL = p.Config(
-    'CDH5 repo key URL (for debian-based only)', 'general', 'cluster',
-    priority=1, default_value="")
+    DEFAULT_SWIFT_LIB_URL = (
+        'https://repository.cloudera.com/artifactory/repo/org'
+        '/apache/hadoop/hadoop-openstack/2.3.0-cdh5.0.0'
+        '/hadoop-openstack-2.3.0-cdh5.0.0.jar')
+    DEFAULT_EXTJS_LIB_URL = 'http://dev.sencha.com/deploy/ext-2.2.zip'
 
-CM5_REPO_URL = p.Config(
-    'CM5 repo list URL', 'general', 'cluster', priority=1,
-    default_value="")
+    SWIFT_LIB_URL = p.Config(
+        'Hadoop OpenStack library URL', 'general', 'cluster', priority=1,
+        default_value=DEFAULT_SWIFT_LIB_URL,
+        description=("Library that adds Swift support to CDH. The file"
+                     " will be downloaded from VM."))
 
-CM5_REPO_KEY_URL = p.Config(
-    'CM5 repo key URL (for debian-based only)', 'general', 'cluster',
-    priority=1, default_value="")
+    EXTJS_LIB_URL = p.Config(
+        "ExtJS library URL", 'general', 'cluster', priority=1,
+        default_value=DEFAULT_EXTJS_LIB_URL,
+        description=("Ext 2.2 library is required for Oozie Web Console. "
+                     "The file will be downloaded from VM with oozie."))
 
-ENABLE_SWIFT = p.Config('Enable Swift', 'general', 'cluster',
-                        config_type='bool', priority=1,
-                        default_value=True)
+    AWAIT_AGENTS_TIMEOUT = p.Config(
+        'Await Cloudera agents timeout', 'general', 'cluster',
+        config_type='int', priority=1, default_value=300, is_optional=True,
+        description="Timeout for Cloudera agents connecting to"
+                    " Coudera Manager, in seconds")
 
-SWIFT_LIB_URL = p.Config(
-    'Hadoop OpenStack library URL', 'general', 'cluster', priority=1,
-    default_value=DEFAULT_SWIFT_LIB_URL,
-    description=("Library that adds Swift support to CDH. The file will be "
-                 "downloaded from VM."))
+    AWAIT_MANAGER_STARTING_TIMEOUT = p.Config(
+        'Timeout for Cloudera Manager starting', 'general', 'cluster',
+        config_type='int', priority=1, default_value=300, is_optional=True,
+        description='Timeout for Cloudera Manager starting, in seconds')
 
+    def __new__(cls):
+        # make it a singleton
+        if not hasattr(cls, '_instance'):
+            cls._instance = super(ConfigHelper, cls).__new__(cls)
+            setattr(cls, '__init__', cls.decorate_init(cls.__init__))
+        return cls._instance
 
-EXTJS_LIB_URL = p.Config(
-    "ExtJS library URL", 'general', 'cluster', priority=1,
-    default_value=DEFAULT_EXTJS_LIB_URL,
-    description=("Ext 2.2 library is required for Oozie Web Console. "
-                 "The file will be downloaded from VM with oozie."))
+    @classmethod
+    def decorate_init(cls, f):
+        """decorate __init__ to prevent multiple calling."""
+        def wrap(*args, **kwargs):
+            if not hasattr(cls, '_init'):
+                f(*args, **kwargs)
+                cls._init = True
+        return wrap
 
+    def __init__(self):
+        self.ng_plugin_configs = []
+        self.priority_one_confs = {}
 
-def _get_cluster_plugin_configs():
-    return [CDH5_REPO_URL, CDH5_REPO_KEY_URL, CM5_REPO_URL, CM5_REPO_KEY_URL,
-            ENABLE_SWIFT, SWIFT_LIB_URL, EXTJS_LIB_URL]
+    def _load_json(self, path_to_file):
+        data = f.get_file_text(path_to_file)
+        return json.loads(data)
 
+    def _init_ng_configs(self, confs, app_target, scope):
 
-# ng wide configs
+        prepare_value = lambda x: x.replace('\n', ' ') if x else ""
+        cfgs = []
+        for cfg in confs:
+            priority = 1 if cfg['name'] in self.priority_one_confs else 2
+            c = p.Config(cfg['name'], app_target, scope, priority=priority,
+                         default_value=prepare_value(cfg['value']),
+                         description=cfg['desc'], is_optional=True)
+            cfgs.append(c)
 
-def _load_json(path_to_file):
-    data = f.get_file_text(path_to_file)
-    return json.loads(data)
+        return cfgs
 
+    def _load_and_init_configs(self, filename, app_target, scope):
+        confs = self._load_json(self.path_to_config + filename)
+        cfgs = self._init_ng_configs(confs, app_target, scope)
+        self.ng_plugin_configs += cfgs
 
-path_to_config = 'plugins/cdh/resources/'
-hdfs_confs = _load_json(path_to_config + 'hdfs-service.json')
-namenode_confs = _load_json(path_to_config + 'hdfs-namenode.json')
-datanode_confs = _load_json(path_to_config + 'hdfs-datanode.json')
-secnamenode_confs = _load_json(path_to_config + 'hdfs-secondarynamenode.json')
-yarn_confs = _load_json(path_to_config + 'yarn-service.json')
-resourcemanager_confs = _load_json(
-    path_to_config + 'yarn-resourcemanager.json')
-nodemanager_confs = _load_json(path_to_config + 'yarn-nodemanager.json')
-jobhistory_confs = _load_json(path_to_config + 'yarn-jobhistory.json')
-oozie_service_confs = _load_json(path_to_config + 'oozie-service.json')
-oozie_role_confs = _load_json(path_to_config + 'oozie-oozie.json')
-hive_service_confs = _load_json(path_to_config + 'hive-service.json')
-hive_metastore_confs = _load_json(path_to_config + 'hive-metastore.json')
-hive_hiveserver_confs = _load_json(path_to_config + 'hive-hiveserver2.json')
-hive_webhcat_confs = _load_json(path_to_config + 'hive-webhcat.json')
-hue_service_confs = _load_json(path_to_config + 'hue-service.json')
-hue_role_confs = _load_json(path_to_config + 'hue-hue.json')
-spark_service_confs = _load_json(path_to_config + 'spark-service.json')
-spark_role_confs = _load_json(path_to_config + 'spark-history.json')
-zookeeper_service_confs = _load_json(path_to_config + 'zookeeper-service.json')
-zookeeper_server_confs = _load_json(path_to_config + 'zookeeper-server.json')
-hbase_confs = _load_json(path_to_config + 'hbase-service.json')
-master_confs = _load_json(path_to_config + 'hbase-master.json')
-regionserver_confs = _load_json(path_to_config + 'hbase-regionserver.json')
-flume_service_confs = _load_json(path_to_config + 'flume-service.json')
-flume_agent_confs = _load_json(path_to_config + 'flume-agent.json')
-sentry_service_confs = _load_json(path_to_config + 'sentry-service.json')
-sentry_server_confs = _load_json(path_to_config +
-                                 'sentry-sentry_server.json')
-solr_service_confs = _load_json(path_to_config + 'solr-service.json')
-solr_server_confs = _load_json(path_to_config + 'solr-solr_server.json')
-sqoop_service_confs = _load_json(path_to_config + 'sqoop-service.json')
-sqoop_server_confs = _load_json(path_to_config +
-                                'sqoop-sqoop_server.json')
-ks_indexer_service_confs = _load_json(path_to_config +
-                                      'ks_indexer-service.json')
-ks_indexer_role_confs = _load_json(path_to_config +
-                                   'ks_indexer-hbase_indexer.json')
-impala_service_confs = _load_json(path_to_config + 'impala-service.json')
-impala_catalogserver_confs = _load_json(path_to_config +
-                                        'impala-catalogserver.json')
-impala_impalad_confs = _load_json(path_to_config +
-                                  'impala-impalad.json')
-impala_llama_confs = _load_json(path_to_config +
-                                'impala-llama.json')
-impala_statestore_confs = _load_json(path_to_config +
-                                     'impala-statestore.json')
+        return cfgs
 
-priority_one_confs = _load_json(path_to_config + 'priority-one-confs.json')
+    def _get_ng_plugin_configs(self):
+        return self.ng_plugin_configs
 
+    def _get_cluster_plugin_configs(self):
+        return [self.CDH5_REPO_URL, self.CDH5_REPO_KEY_URL, self.CM5_REPO_URL,
+                self.CM5_REPO_KEY_URL, self.ENABLE_SWIFT,
+                self.ENABLE_HBASE_COMMON_LIB, self.SWIFT_LIB_URL,
+                self.EXTJS_LIB_URL, self.AWAIT_MANAGER_STARTING_TIMEOUT,
+                self.AWAIT_AGENTS_TIMEOUT]
 
-def _prepare_value(value):
-    if not value:
-        return ""
+    def get_plugin_configs(self):
+        cluster_wide = self._get_cluster_plugin_configs()
+        ng_wide = self._get_ng_plugin_configs()
+        return cluster_wide + ng_wide
 
-    return value.replace('\n', ' ')
+    def _get_config_value(self, cluster, key):
+        return cluster.cluster_configs.get(
+            'general', {}).get(key.name, key.default_value)
 
+    def get_cdh5_repo_url(self, cluster):
+        return self._get_config_value(cluster, self.CDH5_REPO_URL)
 
-def _init_configs(confs, app_target, scope):
-    cfgs = []
-    for cfg in confs:
-        priority = 1 if cfg['name'] in priority_one_confs else 2
-        c = p.Config(cfg['name'], app_target, scope, priority=priority,
-                     default_value=_prepare_value(cfg['value']),
-                     description=cfg['desc'], is_optional=True)
-        cfgs.append(c)
+    def get_cdh5_key_url(self, cluster):
+        return self._get_config_value(cluster, self.CDH5_REPO_KEY_URL)
 
-    return cfgs
+    def get_cm5_repo_url(self, cluster):
+        return self._get_config_value(cluster, self.CM5_REPO_URL)
 
+    def get_cm5_key_url(self, cluster):
+        return self._get_config_value(cluster, self.CM5_REPO_KEY_URL)
 
-def _get_ng_plugin_configs():
-    cfg = []
-    cfg += _init_configs(hdfs_confs, 'HDFS', 'cluster')
-    cfg += _init_configs(namenode_confs, 'NAMENODE', 'node')
-    cfg += _init_configs(datanode_confs, 'DATANODE', 'node')
-    cfg += _init_configs(secnamenode_confs, 'SECONDARYNAMENODE', 'node')
-    cfg += _init_configs(yarn_confs, 'YARN', 'cluster')
-    cfg += _init_configs(resourcemanager_confs, 'RESOURCEMANAGER', 'node')
-    cfg += _init_configs(nodemanager_confs, 'NODEMANAGER', 'node')
-    cfg += _init_configs(jobhistory_confs, 'JOBHISTORY', 'node')
-    cfg += _init_configs(oozie_service_confs, 'OOZIE', 'cluster')
-    cfg += _init_configs(oozie_role_confs, 'OOZIE', 'node')
-    cfg += _init_configs(hive_service_confs, 'HIVE', 'cluster')
-    cfg += _init_configs(hive_metastore_confs, 'HIVEMETASTORE', 'node')
-    cfg += _init_configs(hive_hiveserver_confs, 'HIVESERVER', 'node')
-    cfg += _init_configs(hive_webhcat_confs, 'WEBHCAT', 'node')
-    cfg += _init_configs(hue_service_confs, 'HUE', 'cluster')
-    cfg += _init_configs(hue_role_confs, 'HUE', 'node')
-    cfg += _init_configs(spark_service_confs, 'SPARK_ON_YARN', 'cluster')
-    cfg += _init_configs(spark_role_confs, 'SPARK_ON_YARN', 'node')
-    cfg += _init_configs(zookeeper_service_confs, 'ZOOKEEPER', 'cluster')
-    cfg += _init_configs(zookeeper_server_confs, 'ZOOKEEPER', 'node')
-    cfg += _init_configs(hbase_confs, 'HBASE', 'cluster')
-    cfg += _init_configs(master_confs, 'MASTER', 'node')
-    cfg += _init_configs(regionserver_confs, 'REGIONSERVER', 'node')
-    cfg += _init_configs(flume_service_confs, 'FLUME', 'cluster')
-    cfg += _init_configs(flume_agent_confs, 'FLUME', 'node')
-    cfg += _init_configs(sentry_service_confs, 'SENTRY', 'cluster')
-    cfg += _init_configs(sentry_server_confs, 'SENTRY', 'node')
-    cfg += _init_configs(solr_service_confs, 'SOLR', 'cluster')
-    cfg += _init_configs(solr_server_confs, 'SOLR', 'node')
-    cfg += _init_configs(sqoop_service_confs, 'SQOOP', 'cluster')
-    cfg += _init_configs(sqoop_server_confs, 'SQOOP', 'node')
-    cfg += _init_configs(ks_indexer_service_confs, 'KS_INDEXER', 'cluster')
-    cfg += _init_configs(ks_indexer_role_confs, 'KS_INDEXER', 'node')
-    cfg += _init_configs(impala_service_confs, 'IMPALA', 'cluster')
-    cfg += _init_configs(impala_catalogserver_confs, 'CATALOGSERVER', 'node')
-    cfg += _init_configs(impala_impalad_confs, 'IMPALAD', 'node')
-    cfg += _init_configs(impala_statestore_confs, 'STATESTORE', 'node')
-    return cfg
+    def is_swift_enabled(self, cluster):
+        return self._get_config_value(cluster, self.ENABLE_SWIFT)
 
+    def is_hbase_common_lib_enabled(self, cluster):
+        return self._get_config_value(cluster,
+                                      self.ENABLE_HBASE_COMMON_LIB)
 
-def get_plugin_configs():
-    cluster_wide = _get_cluster_plugin_configs()
-    ng_wide = _get_ng_plugin_configs()
-    return cluster_wide + ng_wide
+    def get_swift_lib_url(self, cluster):
+        return self._get_config_value(cluster, self.SWIFT_LIB_URL)
 
-
-def _get_config_value(cluster, key):
-    return cluster.cluster_configs.get(
-        'general', {}).get(key.name, key.default_value)
-
-
-def get_cdh5_repo_url(cluster):
-    return _get_config_value(cluster, CDH5_REPO_URL)
-
-
-def get_cdh5_key_url(cluster):
-    return _get_config_value(cluster, CDH5_REPO_KEY_URL)
-
-
-def get_cm5_repo_url(cluster):
-    return _get_config_value(cluster, CM5_REPO_URL)
-
-
-def get_cm5_key_url(cluster):
-    return _get_config_value(cluster, CM5_REPO_KEY_URL)
-
-
-def is_swift_enabled(cluster):
-    return _get_config_value(cluster, ENABLE_SWIFT)
-
-
-def get_swift_lib_url(cluster):
-    return _get_config_value(cluster, SWIFT_LIB_URL)
-
-
-def get_extjs_lib_url(cluster):
-    return _get_config_value(cluster, EXTJS_LIB_URL)
+    def get_extjs_lib_url(self, cluster):
+        return self._get_config_value(cluster, self.EXTJS_LIB_URL)
